@@ -111,6 +111,18 @@ def test_transactions_paginate_stops_on_short_page(client):
 # ── insiders ──────────────────────────────────────────────────────────────────
 
 @respx.mock
+def test_insiders_search_returns_list(client):
+    route = respx.get(f"{BASE}/v1/insiders").mock(return_value=httpx.Response(200, json=[INSIDER]))
+    results = client.insiders.search("Cook")
+    assert route.called
+    qs = dict(route.calls[0].request.url.params)
+    assert qs["name"] == "Cook"
+    assert len(results) == 1
+    assert isinstance(results[0], Insider)
+    assert results[0].name == "Cook Timothy D"
+
+
+@respx.mock
 def test_insiders_get_returns_typed_object(client):
     respx.get(f"{BASE}/v1/insiders/0001214156").mock(return_value=httpx.Response(200, json=INSIDER))
     result = client.insiders.get("0001214156")

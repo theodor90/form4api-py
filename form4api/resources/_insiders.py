@@ -12,6 +12,17 @@ class InsidersResource:
     def __init__(self, client: Form4ApiClient) -> None:
         self._client = client
 
+    def search(
+        self,
+        name: str,
+        *,
+        page: int = 1,
+        per_page: int = 20,
+    ) -> list[Insider]:
+        params: dict[str, str] = {"name": name, "page": str(page), "per_page": str(per_page)}
+        data = self._client._get("/v1/insiders", params)
+        return [Insider(**item) for item in data]
+
     def get(self, cik: str) -> Insider:
         data = self._client._get(f"/v1/insiders/{cik}")
         return Insider(**data)

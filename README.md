@@ -57,7 +57,7 @@ asyncio.run(main())
 | Resource | Methods |
 |---|---|
 | `client.transactions` | `.list(**params)`, `.paginate(**params)` |
-| `client.insiders` | `.get(cik)`, `.transactions(cik, **params)` |
+| `client.insiders` | `.search(name, **params)`, `.get(cik)`, `.transactions(cik, **params)` |
 | `client.companies` | `.get(ticker)`, `.insiders(ticker)` |
 | `client.signals` | `.list(**params)` — Business plan |
 | `client.webhooks` | `.create(url, event_types)`, `.list()`, `.delete(id)`, `.events(**params)` |
