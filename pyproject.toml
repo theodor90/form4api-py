@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "form4api"
+version = "0.1.0"
+description = "Python client for the Form4API — real-time SEC Form 4 insider trading data"
+requires-python = ">=3.11"
+dependencies = ["httpx>=0.27"]
+license = "MIT"
+readme = "README.md"
+
+[project.urls]
+Homepage = "https://form4api.com"
+Documentation = "https://form4api.com/docs"
+Repository = "https://github.com/theodor90/form4api-py.git"
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-httpx>=0.30", "respx>=0.21"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["form4api*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
