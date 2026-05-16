@@ -22,6 +22,7 @@ class TransactionsResource:
         code: str | None = None,
         from_date: str | None = None,
         to_date: str | None = None,
+        exclude_10b5: bool | None = None,
         page: int = 1,
         per_page: int = 50,
     ) -> list[Transaction]:
@@ -38,6 +39,8 @@ class TransactionsResource:
             params["from"] = from_date
         if to_date is not None:
             params["to"] = to_date
+        if exclude_10b5 is not None:
+            params["exclude_10b5"] = str(exclude_10b5).lower()
         data = self._client._get("/v1/transactions", params)
         return [Transaction(**item) for item in data]
 
@@ -50,6 +53,7 @@ class TransactionsResource:
         code: str | None = None,
         from_date: str | None = None,
         to_date: str | None = None,
+        exclude_10b5: bool | None = None,
         per_page: int = 50,
     ) -> Generator[list[Transaction], None, None]:
         page = 1
@@ -57,7 +61,7 @@ class TransactionsResource:
             batch = self.list(
                 ticker=ticker, cik=cik, insider_cik=insider_cik,
                 code=code, from_date=from_date, to_date=to_date,
-                page=page, per_page=per_page,
+                exclude_10b5=exclude_10b5, page=page, per_page=per_page,
             )
             if not batch:
                 break

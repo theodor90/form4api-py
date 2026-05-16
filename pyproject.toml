@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "form4api"
-version = "0.2.0"
+version = "0.3.0"
 description = "Python client for the Form4API — real-time SEC Form 4 insider trading data"
 requires-python = ">=3.11"
 dependencies = ["httpx>=0.27"]

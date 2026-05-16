@@ -9,11 +9,18 @@ class Transaction:
     company_name: str
     insider_name: str
     insider_cik: str
+    insider_title: str | None
+    is_director: bool
+    is_officer: bool
+    is10_pct_owner: bool
     accession_number: str
     security_title: str
     transaction_code: str
+    is_open_market: bool
+    is10b5_plan: bool
     shares_amount: float
     price_per_share: float | None
+    total_value: float | None
     shares_owned_after: float | None
     direct_indirect: str | None
     is_derivative: bool
