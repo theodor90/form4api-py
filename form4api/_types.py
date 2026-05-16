@@ -47,6 +47,9 @@ class Company:
     exchange: str | None
     total_filings: int
     active_insiders: int
+    sic_description: str | None
+    state_of_incorporation: str | None
+    website: str | None
 
 
 @dataclass

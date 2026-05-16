@@ -59,6 +59,9 @@ COMPANY = {
     "exchange": "NASDAQ",
     "totalFilings": 100,
     "activeInsiders": 12,
+    "sicDescription": "Electronic Computers",
+    "stateOfIncorporation": "CA",
+    "website": None,
 }
 
 SIGNAL = {
