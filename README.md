@@ -63,6 +63,18 @@ asyncio.run(main())
 | `client.signals` | `.list(**params)`, `.paginate(**params)` — Business plan |
 | `client.webhooks` | `.create(url, event_types)`, `.list()`, `.delete(id)`, `.events(**params)` |
 
+### Not yet in this SDK
+
+The API surface is broader than the typed client. These backend features are **available via the REST API and the `form4api-mcp` server today, but don't have a typed SDK resource yet**:
+
+- **Form 144** notice-of-proposed-sale — `GET /v1/form144` *(Business)*
+- **Institutional holdings (13F-HR)** — `GET /v1/holdings`, **managers** — `GET /v1/managers` *(Business)*
+- **Sentiment** (MSPR-style, 10b5-1-clean) — `GET /v1/signals/sentiment/{ticker}` *(Business)*
+- **Insider career summary** — `GET /v1/insiders/{cik}/summary` *(Pro)*
+- **Post-trade returns** (1d/1w/1m/3m/6m) + `min_return_*` screening filters on `/v1/transactions` *(visible free; screening Pro)*
+
+Until they land in the SDK, call them directly (`client._get("/v1/holdings", {...})`) or see the [full REST reference](https://form4api.com/docs). For LLM workflows, `form4api-mcp` exposes all of the above as tools.
+
 ### Transaction filters
 
 ```python
@@ -77,6 +89,27 @@ client.transactions.list(
     per_page=100,
     page=1,
 )
+```
+
+### Granular filtering (v0.4.0+)
+
+```python
+# The "just show me real buys & sells" preset: open-market only,
+# no 10b5-1 plan trades, no derivatives.
+client.transactions.list(ticker="AAPL", significant=True)
+
+# Multi-code include / exclude (comma-separated SEC codes)
+client.transactions.list(codes="P,S")
+client.transactions.list(exclude_codes="A,M,F,G")
+
+# Whole-category filters: open_market | grants | derivatives | gifts | other
+client.transactions.list(category="open_market")
+client.transactions.list(exclude_category="derivatives")
+client.transactions.list(exclude_derivative=True)
+
+# Trade-size screening (Pro plan or higher)
+client.transactions.list(min_value=1_000_000)          # USD, shares x price
+client.transactions.list(min_shares=10_000, max_shares=100_000)
 ```
 
 ### Transaction fields

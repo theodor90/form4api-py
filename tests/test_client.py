@@ -108,6 +108,35 @@ def test_transactions_list_sends_filters(client):
 
 
 @respx.mock
+def test_transactions_list_sends_granular_filters(client):
+    route = respx.get(f"{BASE}/v1/transactions").mock(return_value=httpx.Response(200, json=[]))
+    client.transactions.list(
+        codes="P,S",
+        exclude_codes="A,M",
+        category="open_market",
+        exclude_category="derivatives",
+        exclude_derivative=True,
+        significant=True,
+        min_value=100000,
+        max_value=5000000,
+        min_shares=100,
+        max_shares=10000,
+    )
+    assert route.called
+    qs = dict(route.calls[0].request.url.params)
+    assert qs["codes"] == "P,S"
+    assert qs["exclude_codes"] == "A,M"
+    assert qs["category"] == "open_market"
+    assert qs["exclude_category"] == "derivatives"
+    assert qs["exclude_derivative"] == "true"
+    assert qs["significant"] == "true"
+    assert qs["min_value"] == "100000"
+    assert qs["max_value"] == "5000000"
+    assert qs["min_shares"] == "100"
+    assert qs["max_shares"] == "10000"
+
+
+@respx.mock
 def test_transactions_paginate_stops_on_short_page(client):
     respx.get(f"{BASE}/v1/transactions").mock(side_effect=[
         httpx.Response(200, json=[TX]),
