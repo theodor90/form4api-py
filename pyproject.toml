@@ -12,8 +12,8 @@ license = "MIT"
 readme = "README.md"
 
 [project.urls]
-Homepage = "https://form4api.com"
-Documentation = "https://form4api.com/docs"
+Homepage = "https://www.form4api.com"
+Documentation = "https://www.form4api.com/docs"
 Repository = "https://github.com/theodor90/form4api-py.git"
 
 [project.optional-dependencies]
