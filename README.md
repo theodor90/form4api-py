@@ -1,6 +1,11 @@
 # form4api
 
-Python client for [Form4API](https://form4api.com) — real-time SEC Form 4 insider trading data.
+Python client for [Form4API](https://www.form4api.com) — real-time SEC Form 4 insider trading data.
+
+[![PyPI version](https://img.shields.io/pypi/v/form4api.svg)](https://pypi.org/project/form4api/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/form4api.svg)](https://pypi.org/project/form4api/)
+[![Python versions](https://img.shields.io/pypi/pyversions/form4api.svg)](https://pypi.org/project/form4api/)
+[![license](https://img.shields.io/pypi/l/form4api.svg)](https://github.com/theodor90/form4api-py/blob/main/LICENSE)
 
 Supports Python 3.11+. Uses `httpx` for both sync and async HTTP.
 
