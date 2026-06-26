@@ -3,11 +3,21 @@ from __future__ import annotations
 import asyncio
 import re
 import time
+from importlib.metadata import PackageNotFoundError, version as _pkg_version
 from typing import Any, TypeVar
 
 import httpx
 
 from form4api._errors import AuthError, Form4ApiError, NotFoundError, PlanError, RateLimitError
+
+# Sent as the User-Agent so the backend can attribute traffic to the Python SDK
+# channel (the admin dashboard buckets by client). Read from installed package
+# metadata so it never drifts from the pyproject version.
+try:
+    _SDK_VERSION = _pkg_version("form4api")
+except PackageNotFoundError:  # not installed (e.g. running from a source tree)
+    _SDK_VERSION = "0.0.0"
+_USER_AGENT = f"form4api-py/{_SDK_VERSION}"
 from form4api.resources._companies import CompaniesResource
 from form4api.resources._insiders import InsidersResource
 from form4api.resources._signals import SignalsResource
@@ -49,7 +59,7 @@ class Form4ApiClient:
         self._max_retries = max_retries
         self._http = httpx.Client(
             timeout=timeout,
-            headers={"X-Api-Key": api_key},
+            headers={"X-Api-Key": api_key, "User-Agent": _USER_AGENT},
         )
         self.transactions = TransactionsResource(self)
         self.insiders = InsidersResource(self)
@@ -142,7 +152,7 @@ class AsyncForm4ApiClient:
         self._max_retries = max_retries
         self._http = httpx.AsyncClient(
             timeout=timeout,
-            headers={"X-Api-Key": api_key},
+            headers={"X-Api-Key": api_key, "User-Agent": _USER_AGENT},
         )
         self.transactions = TransactionsResource(self)  # type: ignore[arg-type]
         self.insiders = InsidersResource(self)  # type: ignore[arg-type]
