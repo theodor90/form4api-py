@@ -81,6 +81,20 @@ def client():
         yield c
 
 
+# ── headers ──────────────────────────────────────────────────────────────────
+
+@respx.mock
+def test_request_sends_branded_user_agent(client):
+    """The SDK sends User-Agent: form4api-py/<version> so the backend can
+    attribute traffic to the Python SDK channel."""
+    import re
+    route = respx.get(f"{BASE}/v1/transactions").mock(return_value=httpx.Response(200, json=[]))
+    client.transactions.list()
+    assert route.called
+    ua = route.calls[0].request.headers.get("user-agent")
+    assert re.match(r"^form4api-py/\d+\.\d+\.\d+$", ua or ""), ua
+
+
 # ── transactions ───────────────────────────────────────────────────────────────
 
 @respx.mock
