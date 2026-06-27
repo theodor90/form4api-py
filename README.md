@@ -162,7 +162,7 @@ client.transactions.list(min_shares=10_000, max_shares=100_000)
 ```python
 # transactions.paginate() — yields one list per page automatically
 all_txns = []
-for batch in client.transactions.paginate(ticker="NVDA", exclude_10b5=True, per_page=500):
+for batch in client.transactions.paginate(ticker="NVDA", exclude_10b5=True, per_page=100):
     all_txns.extend(batch)
 
 # signals.paginate()
