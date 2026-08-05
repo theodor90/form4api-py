@@ -244,12 +244,44 @@ def test_401_raises_auth_error(client):
 
 @respx.mock
 def test_402_raises_plan_error(client):
+    # Plan metadata lives INSIDE the error envelope. This fixture previously put
+    # "requiredPlan" at the top level, as a sibling of "error" — a shape the API
+    # has never produced — so it validated the client's parse bug instead of the
+    # server's contract, and passed while required_plan was dead in production.
     respx.get(f"{BASE}/v1/signals").mock(
-        return_value=httpx.Response(402, json={"error": {"code": "PLAN_REQUIRED", "message": "Upgrade"}, "requiredPlan": "Business"})
+        return_value=httpx.Response(
+            402,
+            json={
+                "error": {
+                    "code": "PLAN_REQUIRED",
+                    "message": "This endpoint requires the Business plan or higher. Your current plan is Free.",
+                    "requestId": "req_test",
+                    "requiredPlan": "Business",
+                    "currentPlan": "Free",
+                    "upgradeUrl": "https://form4api.com/dashboard/billing",
+                }
+            },
+        )
     )
     with pytest.raises(PlanError) as exc:
         client.signals.list()
     assert exc.value.required_plan == "Business"
+    assert exc.value.current_plan == "Free"
+    assert exc.value.upgrade_url == "https://form4api.com/dashboard/billing"
+
+
+@respx.mock
+def test_402_without_plan_metadata_degrades_gracefully(client):
+    """Older backends carried the plan names only as prose in `message`."""
+    respx.get(f"{BASE}/v1/signals").mock(
+        return_value=httpx.Response(402, json={"error": {"code": "PLAN_REQUIRED", "message": "Upgrade"}})
+    )
+    with pytest.raises(PlanError) as exc:
+        client.signals.list()
+    assert exc.value.required_plan is None
+    assert exc.value.current_plan is None
+    assert exc.value.upgrade_url is None
+    assert str(exc.value) == "Upgrade"
 
 
 @respx.mock
