@@ -127,7 +127,17 @@ class Form4ApiClient:
         if res.status_code == 401:
             raise AuthError(message, code)
         if res.status_code == 402:
-            raise PlanError(message, body.get("requiredPlan") if isinstance(body, dict) else None)
+            # Read from the nested `error` object, not the top level. This was
+            # reading body["requiredPlan"], which the API has never emitted at
+            # any level, so PlanError.required_plan was permanently None. The
+            # backend now returns requiredPlan/currentPlan/upgradeUrl inside the
+            # standard error envelope.
+            raise PlanError(
+                message,
+                error.get("requiredPlan") if isinstance(error, dict) else None,
+                error.get("currentPlan") if isinstance(error, dict) else None,
+                error.get("upgradeUrl") if isinstance(error, dict) else None,
+            )
         if res.status_code == 404:
             raise NotFoundError(message, code)
         if res.status_code == 429:
@@ -220,7 +230,17 @@ class AsyncForm4ApiClient:
         if res.status_code == 401:
             raise AuthError(message, code)
         if res.status_code == 402:
-            raise PlanError(message, body.get("requiredPlan") if isinstance(body, dict) else None)
+            # Read from the nested `error` object, not the top level. This was
+            # reading body["requiredPlan"], which the API has never emitted at
+            # any level, so PlanError.required_plan was permanently None. The
+            # backend now returns requiredPlan/currentPlan/upgradeUrl inside the
+            # standard error envelope.
+            raise PlanError(
+                message,
+                error.get("requiredPlan") if isinstance(error, dict) else None,
+                error.get("currentPlan") if isinstance(error, dict) else None,
+                error.get("upgradeUrl") if isinstance(error, dict) else None,
+            )
         if res.status_code == 404:
             raise NotFoundError(message, code)
         if res.status_code == 429:
