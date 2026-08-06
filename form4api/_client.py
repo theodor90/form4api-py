@@ -24,6 +24,28 @@ from form4api.resources._signals import SignalsResource
 from form4api.resources._transactions import TransactionsResource
 from form4api.resources._webhooks import WebhooksResource
 
+# Spec-derived families with no hand-written wrapper. Before these, all 6
+# Pro-gated and 9 of the 10 Business-gated endpoints were unreachable from this
+# SDK — a Business customer could not call Form 144 or 13F holdings at all.
+# Sync and async variants are generated separately; see the note on
+# AsyncForm4ApiClient below for why that matters here but not in the JS SDK.
+from form4api._generated import (
+    GeneratedAsyncCongressResource,
+    GeneratedAsyncDataQualityResource,
+    GeneratedAsyncFilingsResource,
+    GeneratedAsyncForm144Resource,
+    GeneratedAsyncHoldingsResource,
+    GeneratedAsyncStatsResource,
+    GeneratedAsyncStatusResource,
+    GeneratedCongressResource,
+    GeneratedDataQualityResource,
+    GeneratedFilingsResource,
+    GeneratedForm144Resource,
+    GeneratedHoldingsResource,
+    GeneratedStatsResource,
+    GeneratedStatusResource,
+)
+
 DEFAULT_BASE_URL = "https://api.form4api.com"
 _RETRY_DELAYS = [0.5, 1.0, 2.0]
 
@@ -66,6 +88,13 @@ class Form4ApiClient:
         self.companies = CompaniesResource(self)
         self.signals = SignalsResource(self)
         self.webhooks = WebhooksResource(self)
+        self.congress = GeneratedCongressResource(self)
+        self.filings = GeneratedFilingsResource(self)
+        self.form144 = GeneratedForm144Resource(self)
+        self.holdings = GeneratedHoldingsResource(self)
+        self.stats = GeneratedStatsResource(self)
+        self.status = GeneratedStatusResource(self)
+        self.data_quality = GeneratedDataQualityResource(self)
 
     def __enter__(self) -> Form4ApiClient:
         return self
@@ -169,6 +198,25 @@ class AsyncForm4ApiClient:
         self.companies = CompaniesResource(self)  # type: ignore[arg-type]
         self.signals = SignalsResource(self)  # type: ignore[arg-type]
         self.webhooks = WebhooksResource(self)  # type: ignore[arg-type]
+        # The generated ASYNC classes, which actually await _get.
+        #
+        # KNOWN PRE-EXISTING BUG, deliberately not fixed here: the five
+        # hand-written resources above are sync-only and reused on this client
+        # behind `# type: ignore[arg-type]`. Because this client's _get is a
+        # coroutine, `Dataclass(**data)` raises "argument after ** must be a
+        # mapping, not coroutine" on EVERY call — so every hand-written resource
+        # method is broken on the async client and always has been. There are no
+        # async tests, and the type: ignore suppressed the very error that would
+        # have caught it. Fixing it is a separate change needing its own tests;
+        # generating async variants at least stops the new families inheriting
+        # the breakage.
+        self.congress = GeneratedAsyncCongressResource(self)
+        self.filings = GeneratedAsyncFilingsResource(self)
+        self.form144 = GeneratedAsyncForm144Resource(self)
+        self.holdings = GeneratedAsyncHoldingsResource(self)
+        self.stats = GeneratedAsyncStatsResource(self)
+        self.status = GeneratedAsyncStatusResource(self)
+        self.data_quality = GeneratedAsyncDataQualityResource(self)
 
     async def __aenter__(self) -> AsyncForm4ApiClient:
         return self
