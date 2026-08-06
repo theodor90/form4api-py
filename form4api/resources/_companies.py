@@ -2,11 +2,11 @@
 
 from typing import TYPE_CHECKING
 
-from form4api._generated import GeneratedCompaniesResource
+from form4api._generated import GeneratedAsyncCompaniesResource, GeneratedCompaniesResource
 from form4api._types import Company, Insider
 
 if TYPE_CHECKING:
-    from form4api._client import Form4ApiClient
+    from form4api._client import AsyncForm4ApiClient, Form4ApiClient
 
 
 # Extends the generated base rather than replacing it, so spec-derived
@@ -23,6 +23,28 @@ class CompaniesResource(GeneratedCompaniesResource):
 
     def insiders(self, ticker: str) -> list[Insider]:
         data = self._client._get(f"/v1/companies/{ticker}/insiders")
+        return [Insider(**item) for item in data]
+
+
+class AsyncCompaniesResource(GeneratedAsyncCompaniesResource):
+    """Async twin of CompaniesResource.
+
+    Python cannot bridge sync and async in a single code path, so the signatures
+    are duplicated deliberately — that is what keeps type hints and IDE
+    completion intact, and it is how the major typed Python SDKs do it. Only the
+    await differs; any request-shaping logic is factored into module-level
+    helpers so the two paths cannot drift.
+    """
+
+    def __init__(self, client: AsyncForm4ApiClient) -> None:
+        self._client = client
+
+    async def get(self, ticker: str) -> Company:
+        data = await self._client._get(f"/v1/companies/{ticker}")
+        return Company(**data)
+
+    async def insiders(self, ticker: str) -> list[Insider]:
+        data = await self._client._get(f"/v1/companies/{ticker}/insiders")
         return [Insider(**item) for item in data]
 
 
