@@ -3,13 +3,18 @@
 from collections.abc import Generator
 from typing import TYPE_CHECKING
 
+from form4api._generated import GeneratedSignalsResource
 from form4api._types import InsiderSignal
 
 if TYPE_CHECKING:
     from form4api._client import Form4ApiClient
 
 
-class SignalsResource:
+# Extends the generated base rather than replacing it, so spec-derived
+# methods (explain(), sentiment(), convergence()) arrive by regenerating while the curated
+# signatures below stay exactly as published on PyPI. Move an operation out
+# of HANDLED_BY_HANDWRITTEN in codegen/generate.py to let codegen own it.
+class SignalsResource(GeneratedSignalsResource):
     def __init__(self, client: Form4ApiClient) -> None:
         self._client = client
 
