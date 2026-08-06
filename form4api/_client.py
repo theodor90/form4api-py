@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import re
@@ -18,11 +18,11 @@ try:
 except PackageNotFoundError:  # not installed (e.g. running from a source tree)
     _SDK_VERSION = "0.0.0"
 _USER_AGENT = f"form4api-py/{_SDK_VERSION}"
-from form4api.resources._companies import CompaniesResource
-from form4api.resources._insiders import InsidersResource
-from form4api.resources._signals import SignalsResource
-from form4api.resources._transactions import TransactionsResource
-from form4api.resources._webhooks import WebhooksResource
+from form4api.resources._companies import AsyncCompaniesResource, CompaniesResource
+from form4api.resources._insiders import AsyncInsidersResource, InsidersResource
+from form4api.resources._signals import AsyncSignalsResource, SignalsResource
+from form4api.resources._transactions import AsyncTransactionsResource, TransactionsResource
+from form4api.resources._webhooks import AsyncWebhooksResource, WebhooksResource
 
 # Spec-derived families with no hand-written wrapper. Before these, all 6
 # Pro-gated and 9 of the 10 Business-gated endpoints were unreachable from this
@@ -193,23 +193,20 @@ class AsyncForm4ApiClient:
             timeout=timeout,
             headers={"X-Api-Key": api_key, "User-Agent": _USER_AGENT},
         )
-        self.transactions = TransactionsResource(self)  # type: ignore[arg-type]
-        self.insiders = InsidersResource(self)  # type: ignore[arg-type]
-        self.companies = CompaniesResource(self)  # type: ignore[arg-type]
-        self.signals = SignalsResource(self)  # type: ignore[arg-type]
-        self.webhooks = WebhooksResource(self)  # type: ignore[arg-type]
-        # The generated ASYNC classes, which actually await _get.
-        #
-        # KNOWN PRE-EXISTING BUG, deliberately not fixed here: the five
-        # hand-written resources above are sync-only and reused on this client
-        # behind `# type: ignore[arg-type]`. Because this client's _get is a
-        # coroutine, `Dataclass(**data)` raises "argument after ** must be a
-        # mapping, not coroutine" on EVERY call — so every hand-written resource
-        # method is broken on the async client and always has been. There are no
-        # async tests, and the type: ignore suppressed the very error that would
-        # have caught it. Fixing it is a separate change needing its own tests;
-        # generating async variants at least stops the new families inheriting
-        # the breakage.
+        # Async twins, not the sync classes. Until 2026-08-06 this client reused
+        # the sync resources behind `# type: ignore[arg-type]`; because _get here
+        # is a coroutine, `Dataclass(**data)` was handed a coroutine and raised
+        # "argument after ** must be a mapping, not coroutine" on EVERY call, so
+        # every hand-written resource method was broken on the async client and
+        # always had been. There were no async tests, and the type: ignore
+        # suppressed the exact error that would have caught it. Both are fixed:
+        # real async classes, plus async coverage for each of them.
+        self.transactions = AsyncTransactionsResource(self)
+        self.insiders = AsyncInsidersResource(self)
+        self.companies = AsyncCompaniesResource(self)
+        self.signals = AsyncSignalsResource(self)
+        self.webhooks = AsyncWebhooksResource(self)
+        # Spec-derived families, async variants.
         self.congress = GeneratedAsyncCongressResource(self)
         self.filings = GeneratedAsyncFilingsResource(self)
         self.form144 = GeneratedAsyncForm144Resource(self)

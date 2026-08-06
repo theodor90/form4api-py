@@ -39,11 +39,15 @@ def main() -> int:
 
     after = OUTPUT_PATH.read_bytes()
 
+    # Always restore, pass or fail. A check must not mutate the tree it checks —
+    # on Windows the regenerated file is LF where the committed one is CRLF, so
+    # leaving it behind shows up as a spurious modification in git status.
+    OUTPUT_PATH.write_bytes(before)
+
     def normalise(b: bytes) -> bytes:
         return b.replace(b"\r\n", b"\n")
 
     if normalise(before) != normalise(after):
-        OUTPUT_PATH.write_bytes(before)  # leave the tree as we found it
         print(
             "\nform4api/_generated.py is out of date with the OpenAPI spec.\n"
             "Run `py codegen/generate.py` and commit the result.\n",
