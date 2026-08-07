@@ -63,22 +63,27 @@ asyncio.run(main())
 | Resource | Methods |
 |---|---|
 | `client.transactions` | `.list(**params)`, `.paginate(**params)` |
-| `client.insiders` | `.search(name, **params)`, `.get(cik)`, `.transactions(cik, **params)` |
-| `client.companies` | `.get(ticker)`, `.insiders(ticker)` |
-| `client.signals` | `.list(**params)`, `.paginate(**params)` — Business plan |
+| `client.insiders` | `.search(name, **params)`, `.get(cik)`, `.list(**params)`, `.transactions(cik, **params)`, `.summary(cik)` *(Pro)*, `.scorecard(cik)` *(Pro)*, `.leaderboard(**params)` *(Business)* |
+| `client.companies` | `.get(ticker)`, `.insiders(ticker)`, `.list(**params)` |
+| `client.signals` | `.list(**params)`, `.paginate(**params)`, `.explain(ticker)`, `.sentiment(ticker, **params)` — Business; `.convergence(**params)` — Pro |
+| `client.congress` | `.trades(**params)`, `.politicians(**params)` *(Pro)*, `.politician(id_or_slug)` *(Pro)*, `.ticker(ticker)` *(Pro)* |
+| `client.form144` | `.list(**params)` — Business plan |
+| `client.holdings` | `.list(**params)`, `.managers(**params)` — Business plan |
+| `client.filings` | `.recent(**params)`, `.get(accession_number)` |
+| `client.stats` | `.get()` — public, no key required |
+| `client.data_quality` | `.get()` — public, no key required |
+| `client.status` | `.history(**params)` |
 | `client.webhooks` | `.create(url, event_types)`, `.list()`, `.delete(id)`, `.events(**params)` |
 
-### Not yet in this SDK
+Every plan-gated endpoint the API exposes has a typed method here. Calling one
+your key isn't entitled to raises `PlanError` (HTTP 402) carrying
+`required_plan`, `current_plan`, and `upgrade_url` rather than failing opaquely.
 
-The API surface is broader than the typed client. These backend features are **available via the REST API and the `form4api-mcp` server today, but don't have a typed SDK resource yet**:
+An `AsyncForm4ApiClient` mirrors the whole surface with the same resources and
+method names — `await client.insiders.leaderboard()`.
 
-- **Form 144** notice-of-proposed-sale — `GET /v1/form144` *(Business)*
-- **Institutional holdings (13F-HR)** — `GET /v1/holdings`, **managers** — `GET /v1/managers` *(Business)*
-- **Sentiment** (MSPR-style, 10b5-1-clean) — `GET /v1/signals/sentiment/{ticker}` *(Business)*
-- **Insider career summary** — `GET /v1/insiders/{cik}/summary` *(Pro)*
-- **Post-trade returns** (1d/1w/1m/3m/6m) + `min_return_*` screening filters on `/v1/transactions` *(visible free; screening Pro)*
-
-Until they land in the SDK, call them directly (`client._get("/v1/holdings", {...})`) or see the [full REST reference](https://form4api.com/docs). For LLM workflows, `form4api-mcp` exposes all of the above as tools.
+For the full parameter reference see the [REST docs](https://form4api.com/docs).
+For LLM workflows, `form4api-mcp` exposes the same endpoints as tools.
 
 ### Transaction filters
 
