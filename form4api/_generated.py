@@ -43,7 +43,10 @@ class ClusterInsiderEntry:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("trades"), list):
+            kwargs["trades"] = [ClusterTradeEntry._from_dict(i) if isinstance(i, dict) else i for i in kwargs["trades"]]
+        return cls(**kwargs)
 
 
 @dataclass
@@ -111,7 +114,12 @@ class CongressPoliticianProfileResponse:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("recent_trades"), list):
+            kwargs["recent_trades"] = [CongressTradeDto._from_dict(i) if isinstance(i, dict) else i for i in kwargs["recent_trades"]]
+        if isinstance(kwargs.get("top_tickers"), list):
+            kwargs["top_tickers"] = [CongressTickerCountDto._from_dict(i) if isinstance(i, dict) else i for i in kwargs["top_tickers"]]
+        return cls(**kwargs)
 
 
 @dataclass
@@ -213,7 +221,10 @@ class CongressTickerRollupResponse:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("politicians"), list):
+            kwargs["politicians"] = [CongressTickerPoliticianEntryDto._from_dict(i) if isinstance(i, dict) else i for i in kwargs["politicians"]]
+        return cls(**kwargs)
 
 
 @dataclass
@@ -238,7 +249,10 @@ class CongressTradeDto:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("politician"), dict):
+            kwargs["politician"] = CongressPoliticianRefDto._from_dict(kwargs["politician"])
+        return cls(**kwargs)
 
 
 @dataclass
@@ -282,7 +296,12 @@ class ConvergenceEntryDto:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("congress"), list):
+            kwargs["congress"] = [ConvergenceCongressLegDto._from_dict(i) if isinstance(i, dict) else i for i in kwargs["congress"]]
+        if isinstance(kwargs.get("insider"), dict):
+            kwargs["insider"] = ConvergenceInsiderSideDto._from_dict(kwargs["insider"])
+        return cls(**kwargs)
 
 
 @dataclass
@@ -321,7 +340,10 @@ class CorpusStats:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("ingestion_latency"), dict):
+            kwargs["ingestion_latency"] = IngestionLatencyStats._from_dict(kwargs["ingestion_latency"])
+        return cls(**kwargs)
 
 
 @dataclass
@@ -393,7 +415,16 @@ class DataQualityResponse:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("amendments"), dict):
+            kwargs["amendments"] = AmendmentMetrics._from_dict(kwargs["amendments"])
+        if isinstance(kwargs.get("coverage"), dict):
+            kwargs["coverage"] = CoverageMetrics._from_dict(kwargs["coverage"])
+        if isinstance(kwargs.get("freshness"), dict):
+            kwargs["freshness"] = FreshnessMetrics._from_dict(kwargs["freshness"])
+        if isinstance(kwargs.get("returns"), dict):
+            kwargs["returns"] = ReturnsCoverage._from_dict(kwargs["returns"])
+        return cls(**kwargs)
 
 
 @dataclass
@@ -551,7 +582,14 @@ class IngestionHealthResponse:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("form4"), dict):
+            kwargs["form4"] = Form4HealthCheck._from_dict(kwargs["form4"])
+        if isinstance(kwargs.get("prices"), dict):
+            kwargs["prices"] = PricesHealthCheck._from_dict(kwargs["prices"])
+        if isinstance(kwargs.get("queue"), dict):
+            kwargs["queue"] = QueueHealthCheck._from_dict(kwargs["queue"])
+        return cls(**kwargs)
 
 
 @dataclass
@@ -610,7 +648,16 @@ class InsiderCareer:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("companies"), list):
+            kwargs["companies"] = [InsiderCompanyEntry._from_dict(i) if isinstance(i, dict) else i for i in kwargs["companies"]]
+        if isinstance(kwargs.get("returns"), dict):
+            kwargs["returns"] = InsiderReturnsSummary._from_dict(kwargs["returns"])
+        if isinstance(kwargs.get("ten_b5_plan"), dict):
+            kwargs["ten_b5_plan"] = Insider10b5Split._from_dict(kwargs["ten_b5_plan"])
+        if isinstance(kwargs.get("transaction_type_breakdown"), dict):
+            kwargs["transaction_type_breakdown"] = InsiderTxCodeBreakdown._from_dict(kwargs["transaction_type_breakdown"])
+        return cls(**kwargs)
 
 
 @dataclass
@@ -629,6 +676,25 @@ class InsiderCompanyEntry:
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
         return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class InsiderLeaderboardResponse:
+    insiders: list[LeaderboardEntry] | None = None
+    methodology: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "InsiderLeaderboardResponse":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("insiders"), list):
+            kwargs["insiders"] = [LeaderboardEntry._from_dict(i) if isinstance(i, dict) else i for i in kwargs["insiders"]]
+        return cls(**kwargs)
 
 
 @dataclass
@@ -699,7 +765,12 @@ class InsiderScorecardResponse:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("best_buy"), dict):
+            kwargs["best_buy"] = ScorecardTradeRef._from_dict(kwargs["best_buy"])
+        if isinstance(kwargs.get("worst_buy"), dict):
+            kwargs["worst_buy"] = ScorecardTradeRef._from_dict(kwargs["worst_buy"])
+        return cls(**kwargs)
 
 
 @dataclass
@@ -720,7 +791,10 @@ class InsiderSummaryResponse:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("career"), dict):
+            kwargs["career"] = InsiderCareer._from_dict(kwargs["career"])
+        return cls(**kwargs)
 
 
 @dataclass
@@ -755,6 +829,29 @@ class InstitutionalOwnershipDto:
 
     @classmethod
     def _from_dict(cls, data: dict) -> "InstitutionalOwnershipDto":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("top_holders"), list):
+            kwargs["top_holders"] = [TopHolderDto._from_dict(i) if isinstance(i, dict) else i for i in kwargs["top_holders"]]
+        return cls(**kwargs)
+
+
+@dataclass
+class LeaderboardEntry:
+    avg_return: float | None = None
+    hit_rate: float | None = None
+    insider_cik: str | None = None
+    insider_name: str | None = None
+    last_trade_at: str | None = None
+    scored_buy_count: int | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "LeaderboardEntry":
         """Build from an API payload, ignoring unknown keys.
 
         Constructing with **data directly (as the hand-written resources do)
@@ -905,7 +1002,10 @@ class SentimentResponse:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("monthly"), list):
+            kwargs["monthly"] = [SentimentMonthEntry._from_dict(i) if isinstance(i, dict) else i for i in kwargs["monthly"]]
+        return cls(**kwargs)
 
 
 @dataclass
@@ -950,7 +1050,16 @@ class SignalExplanation:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("cluster_buyers"), list):
+            kwargs["cluster_buyers"] = [ClusterInsiderEntry._from_dict(i) if isinstance(i, dict) else i for i in kwargs["cluster_buyers"]]
+        if isinstance(kwargs.get("criteria"), dict):
+            kwargs["criteria"] = SignalCriteria._from_dict(kwargs["criteria"])
+        if isinstance(kwargs.get("excluded"), list):
+            kwargs["excluded"] = [ExcludedTradeEntry._from_dict(i) if isinstance(i, dict) else i for i in kwargs["excluded"]]
+        if isinstance(kwargs.get("ratio"), dict):
+            kwargs["ratio"] = RatioBasis._from_dict(kwargs["ratio"])
+        return cls(**kwargs)
 
 
 @dataclass
@@ -1055,7 +1164,10 @@ class TransactionResponse:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("institutional_ownership"), dict):
+            kwargs["institutional_ownership"] = InstitutionalOwnershipDto._from_dict(kwargs["institutional_ownership"])
+        return cls(**kwargs)
 
 
 @dataclass
@@ -1091,7 +1203,10 @@ class UptimeHistoryResponse:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("days"), list):
+            kwargs["days"] = [UptimeDayBucket._from_dict(i) if isinstance(i, dict) else i for i in kwargs["days"]]
+        return cls(**kwargs)
 
 
 @dataclass
@@ -1463,6 +1578,28 @@ class GeneratedInsidersResource:
     def __init__(self, client) -> None:
         self._client = client
 
+    def leaderboard(self, *, horizon: str | None = None, order: str | None = None, min_trades: int | None = None, limit: int | None = None) -> InsiderLeaderboardResponse:
+        """Ranked leaderboard of insiders by buy track-record (Business plan+)
+
+        Returns the top insiders ranked by historical buy performance — same scored-buy methodology as
+GET /v1/insiders/{cik}/scorecard, applied across the whole corpus rather than one insider. Use
+this to discover which insiders have the best track record; use the per-insider scorecard once
+you have a specific CIK. Scores use absolute return (NOT market-adjusted) — a hit is a scored
+buy with a positive 3m (or 6m) return anchored at the filing-date close. Only discretionary
+open-market buys (P-code, not 10b5-1, not derivative) with a matured return are counted.
+Insiders with fewer than min_trades (floor 5) scored buys are excluded. Requires Business plan
+or higher (402 PLAN_REQUIRED on Free/Starter/Pro). Results are cached for 1 hour per unique
+parameter combination."""
+        params = {
+            "horizon": horizon,
+            "order": order,
+            "min_trades": min_trades,
+            "limit": limit,
+        }
+        params = {k: str(v) for k, v in params.items() if v is not None}
+        data = self._client._get(f"/v1/insiders/leaderboard", params=params)
+        return InsiderLeaderboardResponse._from_dict(data)
+
     def list(self, *, name: str | None = None, page: int | None = None, per_page: int | None = None) -> list[InsiderResponse]:
         """Search insiders (officers, directors, 10% owners) by name
 
@@ -1513,6 +1650,28 @@ AvgReturn1w, etc.) are stored as FRACTIONS — 0.05 means +5%."""
 class GeneratedAsyncInsidersResource:
     def __init__(self, client) -> None:
         self._client = client
+
+    async def leaderboard(self, *, horizon: str | None = None, order: str | None = None, min_trades: int | None = None, limit: int | None = None) -> InsiderLeaderboardResponse:
+        """Ranked leaderboard of insiders by buy track-record (Business plan+)
+
+        Returns the top insiders ranked by historical buy performance — same scored-buy methodology as
+GET /v1/insiders/{cik}/scorecard, applied across the whole corpus rather than one insider. Use
+this to discover which insiders have the best track record; use the per-insider scorecard once
+you have a specific CIK. Scores use absolute return (NOT market-adjusted) — a hit is a scored
+buy with a positive 3m (or 6m) return anchored at the filing-date close. Only discretionary
+open-market buys (P-code, not 10b5-1, not derivative) with a matured return are counted.
+Insiders with fewer than min_trades (floor 5) scored buys are excluded. Requires Business plan
+or higher (402 PLAN_REQUIRED on Free/Starter/Pro). Results are cached for 1 hour per unique
+parameter combination."""
+        params = {
+            "horizon": horizon,
+            "order": order,
+            "min_trades": min_trades,
+            "limit": limit,
+        }
+        params = {k: str(v) for k, v in params.items() if v is not None}
+        data = await self._client._get(f"/v1/insiders/leaderboard", params=params)
+        return InsiderLeaderboardResponse._from_dict(data)
 
     async def list(self, *, name: str | None = None, page: int | None = None, per_page: int | None = None) -> list[InsiderResponse]:
         """Search insiders (officers, directors, 10% owners) by name

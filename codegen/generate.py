@@ -55,7 +55,7 @@ SKIP_OPERATIONS = {
     "ExportTransactions", "ExportForm144",
     "InsiderTradingAlias",
     "GetFeaturedTestimonials", "SubmitTestimonial", "JoinUpgradeWaitlist",
-    "GetInsiderLeaderboard", "GetKeyUsage", "GetKeyActivity", "GetUsageHistory",
+    "GetKeyUsage", "GetKeyActivity", "GetUsageHistory",
     "ListWebhooks", "GetWebhookEvents", "CreateWebhook", "DeleteWebhook",
 }
 
@@ -100,6 +100,7 @@ METHOD_NAMES = {
     "ListInsiders": "list",
     "GetInsiderSummary": "summary",
     "GetInsiderScorecard": "scorecard",
+    "GetInsiderLeaderboard": "leaderboard",
     "ListHoldings": "list",
     "ListManagers": "managers",
     "ExplainSignal": "explain",
@@ -152,6 +153,23 @@ def py_type(schema: dict | None, required: bool = True) -> str:
     return base
 
 
+def nested_ref(schema: dict | None) -> tuple[str | None, bool]:
+    """Resolve a property schema to (generated class name, is_list).
+
+    Returns (None, False) for scalars, free-form objects, and arrays of
+    scalars — anything with no generated dataclass to hydrate into.
+    """
+    if not schema:
+        return None, False
+    if "$ref" in schema:
+        return schema["$ref"].split("/")[-1], False
+    if schema.get("type") == "array":
+        items = schema.get("items") or {}
+        if "$ref" in items:
+            return items["$ref"].split("/")[-1], True
+    return None, False
+
+
 def render_dataclass(name: str, schema: dict) -> str:
     props: dict = schema.get("properties") or {}
     required = set(schema.get("required") or [])
@@ -190,7 +208,41 @@ def render_dataclass(name: str, schema: dict) -> str:
     lines.append("        means the SDK raises TypeError the moment the backend adds a field.")
     lines.append('        Filtering keeps older SDK versions working against a newer API."""')
     lines.append("        known = {f.name for f in fields(cls)}")
-    lines.append("        return cls(**{k: v for k, v in data.items() if k in known})")
+
+    # Nested objects have to be hydrated explicitly, or the annotation lies.
+    #
+    # cls(**data) assigns whatever the payload holds, so a field annotated
+    # `list[LeaderboardEntry]` was being handed a list of plain dicts. The
+    # client's _normalise already snake_cases keys recursively, which made the
+    # breakage subtle: `result.insiders[0]["insider_cik"]` worked while the
+    # documented `result.insiders[0].insider_cik` raised AttributeError. 31
+    # fields across this SDK were affected.
+    #
+    # Names resolve at call time, so a nested class defined later in the module
+    # is fine and no ordering constraint is introduced.
+    nested: list[tuple[str, str, bool]] = []
+    for prop, ps in sorted(props.items()):
+        target, is_list = nested_ref(ps)
+        if target:
+            nested.append((safe_ident(prop), target, is_list))
+
+    if not nested:
+        lines.append("        return cls(**{k: v for k, v in data.items() if k in known})")
+    else:
+        lines.append("        kwargs = {k: v for k, v in data.items() if k in known}")
+        for field, target, is_list in nested:
+            if is_list:
+                lines.append(f'        if isinstance(kwargs.get("{field}"), list):')
+                lines.append(
+                    f'            kwargs["{field}"] = [{target}._from_dict(i) '
+                    f'if isinstance(i, dict) else i for i in kwargs["{field}"]]'
+                )
+            else:
+                lines.append(f'        if isinstance(kwargs.get("{field}"), dict):')
+                lines.append(
+                    f'            kwargs["{field}"] = {target}._from_dict(kwargs["{field}"])'
+                )
+        lines.append("        return cls(**kwargs)")
     lines.append("")
     return "\n".join(lines) + "\n"
 

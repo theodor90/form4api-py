@@ -281,3 +281,109 @@ def test_async_paginate_yields_pages() -> None:
 
     # Second page is short, so iteration stops without a third request.
     assert asyncio.run(go()) == [2, 1]
+
+
+# ── Business-gated leaderboard (added 2026-08-07) ──────────────────────────
+
+LEADERBOARD_BODY = {
+    "insiders": [
+        {
+            "insiderCik": "0001214156",
+            "insiderName": "Test Owner",
+            "scoredBuyCount": 7,
+            "hitRate": 0.7143,
+            "avgReturn": 0.109,
+            "lastTradeAt": "2026-06-01T00:00:00Z",
+        }
+    ],
+    "methodology": "absolute-3m-v1",
+}
+
+
+@respx.mock
+def test_leaderboard_hits_path_and_forwards_params(client: Form4ApiClient) -> None:
+    """This endpoint was unreachable from this SDK until insiderapi #192.
+
+    It is Business-gated, and the SDK's own generated scorecard docs told
+    customers to "use GET /v1/insiders/leaderboard (Business+)" — pointing at
+    something the client could not call. It was skipped by the generator
+    because the endpoint never declared a 200 response type, so there was no
+    schema to bind to.
+    """
+    route = respx.get(f"{BASE}/v1/insiders/leaderboard").mock(
+        return_value=httpx.Response(200, json=LEADERBOARD_BODY)
+    )
+    result = client.insiders.leaderboard(horizon="6m", order="avg_return", min_trades=10)
+
+    request = route.calls.last.request
+    assert request.url.path == "/v1/insiders/leaderboard"
+    assert request.url.params["horizon"] == "6m"
+    assert request.url.params["order"] == "avg_return"
+    assert request.url.params["min_trades"] == "10"
+
+    # camelCase from the API maps onto snake_case dataclass fields.
+    assert result.methodology == "absolute-3m-v1"
+    assert result.insiders[0].insider_cik == "0001214156"
+    assert result.insiders[0].hit_rate == 0.7143
+
+
+def test_leaderboard_works_on_the_async_client() -> None:
+    """The async twin, tested because the sync one passing proves nothing here.
+
+    Every async resource method was broken on PyPI until #8 — each raised
+    TypeError on every call — and it went unnoticed precisely because a sync
+    test like the one above was the only coverage. Any new generated method
+    gets both twins exercised.
+    """
+    with respx.mock:
+        respx.get(f"{BASE}/v1/insiders/leaderboard").mock(
+            return_value=httpx.Response(200, json=LEADERBOARD_BODY)
+        )
+
+        async def go():
+            async with AsyncForm4ApiClient("test-key", base_url=BASE, max_retries=0) as client:
+                return await client.insiders.leaderboard(limit=5)
+
+        result = asyncio.run(go())
+
+    assert result.insiders[0].insider_name == "Test Owner"
+    assert result.insiders[0].scored_buy_count == 7
+
+
+@respx.mock
+def test_nested_objects_hydrate_all_the_way_down(client: Form4ApiClient) -> None:
+    """Nested payload objects become their dataclasses, recursively.
+
+    cls(**data) assigns whatever the payload holds, so before this every field
+    annotated as a nested dataclass was handed a plain dict — the annotation
+    lied. 31 fields across this SDK were affected. It stayed hidden because the
+    client's _normalise snake_cases keys recursively, so dict-style access
+    worked and only the documented attribute access broke.
+
+    InsiderSummaryResponse.career.returns is two levels deep, which is what
+    makes this a recursion test rather than a repeat of the leaderboard one.
+    """
+    respx.get(f"{BASE}/v1/insiders/0001214156/summary").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "cik": "0001214156",
+                "name": "Test Owner",
+                "career": {
+                    "totalTransactions": 12,
+                    "returns": {"avgReturn3m": 0.109, "scoredBuys": 7},
+                    "companies": [{"ticker": "AAPL", "transactionCount": 5}],
+                },
+            },
+        )
+    )
+    result = client.insiders.summary("0001214156")
+
+    # One level down.
+    assert result.career.total_transactions == 12
+    # Two levels down — a dataclass reached through another dataclass.
+    # Field is avg_return3m, not avg_return_3m: camel_to_snake does not split
+    # a letter-to-digit boundary, and _client._camel_to_snake must agree.
+    assert result.career.returns.avg_return3m == 0.109
+    # And through a list, not just a single object.
+    assert result.career.companies[0].ticker == "AAPL"
