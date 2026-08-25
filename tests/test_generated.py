@@ -387,3 +387,47 @@ def test_nested_objects_hydrate_all_the_way_down(client: Form4ApiClient) -> None
     assert result.career.returns.avg_return3m == 0.109
     # And through a list, not just a single object.
     assert result.career.companies[0].ticker == "AAPL"
+
+
+# The two methods that arrived by derivation rather than by a hand-written
+# METHOD_NAMES entry. Codegen could not run at all between 2026-08-04 and
+# 2026-08-25, so these are the first endpoints to reach this SDK without anyone
+# naming them — worth pinning that they are wired to the right paths and not
+# just present on the class.
+@respx.mock
+def test_filings_list_hits_path_and_forwards_filters(client: Form4ApiClient) -> None:
+    route = respx.get(f"{BASE}/v1/filings").mock(return_value=httpx.Response(200, json=[]))
+    client.filings.list(ticker="AAPL", per_page=5)
+
+    request = route.calls.last.request
+    assert request.url.path == "/v1/filings"
+    assert request.url.params["ticker"] == "AAPL"
+    assert request.url.params["per_page"] == "5"
+
+
+@respx.mock
+def test_filings_list_is_distinct_from_filings_recent(client: Form4ApiClient) -> None:
+    # Derivation stripped the resource from both operationIds; if it had
+    # collapsed them, one would silently shadow the other.
+    route = respx.get(f"{BASE}/v1/filings/recent").mock(return_value=httpx.Response(200, json=[]))
+    client.filings.recent()
+    assert route.calls.last.request.url.path == "/v1/filings/recent"
+
+
+@respx.mock
+def test_insiders_directory_hits_path_and_forwards_letter(client: Form4ApiClient) -> None:
+    route = respx.get(f"{BASE}/v1/insiders/directory").mock(
+        return_value=httpx.Response(200, json={"letters": [], "insiders": []})
+    )
+    client.insiders.directory(letter="S", per_page=200)
+
+    request = route.calls.last.request
+    assert request.url.path == "/v1/insiders/directory"
+    assert request.url.params["letter"] == "S"
+
+
+@respx.mock
+def test_insiders_directory_does_not_shadow_insiders_list(client: Form4ApiClient) -> None:
+    route = respx.get(f"{BASE}/v1/insiders").mock(return_value=httpx.Response(200, json=[]))
+    client.insiders.list()
+    assert route.calls.last.request.url.path == "/v1/insiders"
