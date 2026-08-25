@@ -428,6 +428,47 @@ class DataQualityResponse:
 
 
 @dataclass
+class DirectoryEntryResponse:
+    cik: str | None = None
+    filer_group_size: int | None = None
+    is_director: bool | None = None
+    is_officer: bool | None = None
+    is_ten_percent_owner: bool | None = None
+    last_filed_at: str | None = None
+    name: str | None = None
+    officer_title: str | None = None
+    primary_company_name: str | None = None
+    primary_ticker: str | None = None
+    transaction_count: int | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "DirectoryEntryResponse":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class DirectoryLetter:
+    count: int | None = None
+    letter: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "DirectoryLetter":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
 class ExcludedTradeEntry:
     code: str | None = None
     insider_cik: str | None = None
@@ -676,6 +717,33 @@ class InsiderCompanyEntry:
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
         return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class InsiderDirectoryResponse:
+    entries: list[DirectoryEntryResponse] | None = None
+    letter: str | None = None
+    letter_total: int | None = None
+    letters: list[DirectoryLetter] | None = None
+    page: int | None = None
+    per_page: int | None = None
+    refreshed_at: str | None = None
+    total: int | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "InsiderDirectoryResponse":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("entries"), list):
+            kwargs["entries"] = [DirectoryEntryResponse._from_dict(i) if isinstance(i, dict) else i for i in kwargs["entries"]]
+        if isinstance(kwargs.get("letters"), list):
+            kwargs["letters"] = [DirectoryLetter._from_dict(i) if isinstance(i, dict) else i for i in kwargs["letters"]]
+        return cls(**kwargs)
 
 
 @dataclass
@@ -1302,7 +1370,7 @@ class GeneratedCongressResource:
     def trades(self, *, ticker: str | None = None, politician: str | None = None, party: str | None = None, chamber: str | None = None, state: str | None = None, transaction_type: str | None = None, min_amount: float | None = None, transaction_date_from: str | None = None, transaction_date_to: str | None = None, disclosure_date_from: str | None = None, disclosure_date_to: str | None = None, page: int | None = None, per_page: int | None = None) -> list[CongressTradeDto]:
         """Query congressional STOCK Act trades (Free+, plan-clamped disclosure window)
 
-        Returns a paginated JSON list of congressional periodic-transaction-report trades, most recently DISCLOSED first, with non-superseded rows only (amended-away rows never appear). PLAN-CLAMPED WINDOW: this endpoint is open to every plan, but how far back you can see is clamped on disclosureDate — Free sees only trades disclosed in the last 30 days, Starter the last 366 days, Pro/Business/Enterprise unlimited history. Passing an older disclosure_date_from than your plan allows does not extend the window — the floor always wins. Filters: ticker, politician (bioguideId, exact), party (free-text, case-insensitive exact match — not a fixed enum), chamber (House|Senate), state (2-letter code), transaction_type (purchase|sale|partial_sale|exchange), min_amount (range-aware — matches AmountLow >= value, never a fabricated midpoint), transaction_date_from/to, disclosure_date_from/to. Every row always carries BOTH amountLow and amountHigh (STOCK Act discloses ranges, never exact figures) and disclosureLagDays = (disclosureDate - transactionDate) — the STOCK Act allows up to 45 days of lag, so "real-time" here means minutes-after-disclosure, not minutes-after-trade. For per-politician or per-ticker rollups use GET /v1/congress/politicians, /v1/congress/politicians/{idOrSlug}, or /v1/congress/tickers/{ticker} (all Pro+). Query runs live against the database — no caching."""
+        Returns a paginated JSON list of congressional periodic-transaction-report trades, most recently DISCLOSED first, with non-superseded rows only (amended-away rows never appear). COVERAGE — HOUSE ONLY TODAY: every trade in this dataset comes from the U.S. House Clerk's PTR index. Senate eFD (efdsearch.senate.gov) returns 403 to datacenter traffic, so no Senate filings are ingested yet. chamber=Senate remains a valid filter but matches nothing and returns the response header X-Coverage-Note: chamber-not-covered, so an empty result is never ambiguous. Scanning by chamber should treat that header as "not covered", not as "no trades". PLAN-CLAMPED WINDOW: this endpoint is open to every plan, but how far back you can see is clamped on disclosureDate — Free sees only trades disclosed in the last 30 days, Starter the last 366 days, Pro/Business/Enterprise unlimited history. Passing an older disclosure_date_from than your plan allows does not extend the window — the floor always wins. Filters: ticker, politician (bioguideId, exact), party (free-text, case-insensitive exact match — not a fixed enum), chamber (House|Senate — see the coverage note above), state (2-letter code), transaction_type (purchase|sale|partial_sale|exchange), min_amount (range-aware — matches AmountLow >= value, never a fabricated midpoint), transaction_date_from/to, disclosure_date_from/to. Every row always carries BOTH amountLow and amountHigh (STOCK Act discloses ranges, never exact figures) and disclosureLagDays = (disclosureDate - transactionDate) — the STOCK Act allows up to 45 days of lag, so "real-time" here means minutes-after-disclosure, not minutes-after-trade. For per-politician or per-ticker rollups use GET /v1/congress/politicians, /v1/congress/politicians/{idOrSlug}, or /v1/congress/tickers/{ticker} (all Pro+). Query runs live against the database — no caching."""
         params = {
             "ticker": ticker,
             "politician": politician,
@@ -1365,7 +1433,7 @@ class GeneratedAsyncCongressResource:
     async def trades(self, *, ticker: str | None = None, politician: str | None = None, party: str | None = None, chamber: str | None = None, state: str | None = None, transaction_type: str | None = None, min_amount: float | None = None, transaction_date_from: str | None = None, transaction_date_to: str | None = None, disclosure_date_from: str | None = None, disclosure_date_to: str | None = None, page: int | None = None, per_page: int | None = None) -> list[CongressTradeDto]:
         """Query congressional STOCK Act trades (Free+, plan-clamped disclosure window)
 
-        Returns a paginated JSON list of congressional periodic-transaction-report trades, most recently DISCLOSED first, with non-superseded rows only (amended-away rows never appear). PLAN-CLAMPED WINDOW: this endpoint is open to every plan, but how far back you can see is clamped on disclosureDate — Free sees only trades disclosed in the last 30 days, Starter the last 366 days, Pro/Business/Enterprise unlimited history. Passing an older disclosure_date_from than your plan allows does not extend the window — the floor always wins. Filters: ticker, politician (bioguideId, exact), party (free-text, case-insensitive exact match — not a fixed enum), chamber (House|Senate), state (2-letter code), transaction_type (purchase|sale|partial_sale|exchange), min_amount (range-aware — matches AmountLow >= value, never a fabricated midpoint), transaction_date_from/to, disclosure_date_from/to. Every row always carries BOTH amountLow and amountHigh (STOCK Act discloses ranges, never exact figures) and disclosureLagDays = (disclosureDate - transactionDate) — the STOCK Act allows up to 45 days of lag, so "real-time" here means minutes-after-disclosure, not minutes-after-trade. For per-politician or per-ticker rollups use GET /v1/congress/politicians, /v1/congress/politicians/{idOrSlug}, or /v1/congress/tickers/{ticker} (all Pro+). Query runs live against the database — no caching."""
+        Returns a paginated JSON list of congressional periodic-transaction-report trades, most recently DISCLOSED first, with non-superseded rows only (amended-away rows never appear). COVERAGE — HOUSE ONLY TODAY: every trade in this dataset comes from the U.S. House Clerk's PTR index. Senate eFD (efdsearch.senate.gov) returns 403 to datacenter traffic, so no Senate filings are ingested yet. chamber=Senate remains a valid filter but matches nothing and returns the response header X-Coverage-Note: chamber-not-covered, so an empty result is never ambiguous. Scanning by chamber should treat that header as "not covered", not as "no trades". PLAN-CLAMPED WINDOW: this endpoint is open to every plan, but how far back you can see is clamped on disclosureDate — Free sees only trades disclosed in the last 30 days, Starter the last 366 days, Pro/Business/Enterprise unlimited history. Passing an older disclosure_date_from than your plan allows does not extend the window — the floor always wins. Filters: ticker, politician (bioguideId, exact), party (free-text, case-insensitive exact match — not a fixed enum), chamber (House|Senate — see the coverage note above), state (2-letter code), transaction_type (purchase|sale|partial_sale|exchange), min_amount (range-aware — matches AmountLow >= value, never a fabricated midpoint), transaction_date_from/to, disclosure_date_from/to. Every row always carries BOTH amountLow and amountHigh (STOCK Act discloses ranges, never exact figures) and disclosureLagDays = (disclosureDate - transactionDate) — the STOCK Act allows up to 45 days of lag, so "real-time" here means minutes-after-disclosure, not minutes-after-trade. For per-politician or per-ticker rollups use GET /v1/congress/politicians, /v1/congress/politicians/{idOrSlug}, or /v1/congress/tickers/{ticker} (all Pro+). Query runs live against the database — no caching."""
         params = {
             "ticker": ticker,
             "politician": politician,
@@ -1421,6 +1489,23 @@ class GeneratedFilingsResource:
         data = self._client._get(f"/v1/filings/{accession}")
         return FilingResponse._from_dict(data)
 
+    def list(self, *, ticker: str | None = None, cik: str | None = None, from_: str | None = None, to: str | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[FilingResponse]:
+        """List Form 4 filings with optional ticker, CIK and date filters
+
+        Returns a paginated list of Form 4 filings, newest filed first. Filter by ticker, cik, and a from/to filed-date window. Each entry carries the accession number, company ticker/name, period of report, filed date, amendment type (Original/Amendment), and the count of non-superseded transactions in that filing. Use this for a company's filing HISTORY; use GET /v1/filings/recent for a live newest-first feed (it has no page parameter), and GET /v1/transactions when you want the individual trades rather than the filings that contain them. `limit` is accepted as an alias for `per_page`. Not plan-gated."""
+        params = {
+            "ticker": ticker,
+            "cik": cik,
+            "from": from_,
+            "to": to,
+            "page": page,
+            "per_page": per_page,
+            "limit": limit,
+        }
+        params = {k: str(v) for k, v in params.items() if v is not None}
+        data = self._client._get(f"/v1/filings", params=params)
+        return [FilingResponse._from_dict(item) for item in data]
+
     def recent(self, *, ticker: str | None = None, per_page: int | None = None) -> list[FilingResponse]:
         """Get the most recently filed Form 4s, optionally filtered by ticker
 
@@ -1444,6 +1529,23 @@ class GeneratedAsyncFilingsResource:
         Returns one filing's metadata — accession number, company ticker/name, period of report, filed date, amendment type (Original/Amendment), and the count of non-superseded transactions it contains. Use this to look up a specific filing you already have the accession number for (e.g. from GET /v1/filings/recent or GET /v1/transactions); it does not return the individual transaction rows themselves — pull those via GET /v1/transactions filtered by ticker/cik and date. Returns 404 NOT_FOUND if the accession number isn't tracked. Not plan-gated. Query runs live against the database — no caching."""
         data = await self._client._get(f"/v1/filings/{accession}")
         return FilingResponse._from_dict(data)
+
+    async def list(self, *, ticker: str | None = None, cik: str | None = None, from_: str | None = None, to: str | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[FilingResponse]:
+        """List Form 4 filings with optional ticker, CIK and date filters
+
+        Returns a paginated list of Form 4 filings, newest filed first. Filter by ticker, cik, and a from/to filed-date window. Each entry carries the accession number, company ticker/name, period of report, filed date, amendment type (Original/Amendment), and the count of non-superseded transactions in that filing. Use this for a company's filing HISTORY; use GET /v1/filings/recent for a live newest-first feed (it has no page parameter), and GET /v1/transactions when you want the individual trades rather than the filings that contain them. `limit` is accepted as an alias for `per_page`. Not plan-gated."""
+        params = {
+            "ticker": ticker,
+            "cik": cik,
+            "from": from_,
+            "to": to,
+            "page": page,
+            "per_page": per_page,
+            "limit": limit,
+        }
+        params = {k: str(v) for k, v in params.items() if v is not None}
+        data = await self._client._get(f"/v1/filings", params=params)
+        return [FilingResponse._from_dict(item) for item in data]
 
     async def recent(self, *, ticker: str | None = None, per_page: int | None = None) -> list[FilingResponse]:
         """Get the most recently filed Form 4s, optionally filtered by ticker
@@ -1578,6 +1680,36 @@ class GeneratedInsidersResource:
     def __init__(self, client) -> None:
         self._client = client
 
+    def directory(self, *, letter: str | None = None, page: int | None = None, per_page: int | None = None) -> InsiderDirectoryResponse:
+        """Browse insiders alphabetically by surname
+
+        Returns the A-Z rail with a count per letter, plus one page of insiders under the
+requested letter. Omit `letter` to get the rail and totals with no rows.
+
+Names come from EDGAR surname-first ("HENNEMAN JOHN B III"), so alphabetical order
+is order by surname. Casing in the source is inconsistent and is not normalised here.
+
+This lists only insiders with at least 3 non-superseded transactions, capped at the
+5,000 most active — the same set as the insiders sitemap shard, so the two cannot
+drift. To find someone outside that set, use GET /v1/insiders?name= which searches
+every filer. Rebuilt daily; `refreshedAt` reports when. Not plan-gated.
+
+One row per FILER GROUP. A fund group files a single Form 4 listing several
+reporting owners — the fund, its GP, its management company — and each is a real
+EDGAR filer with its own CIK. Listing all of them spent about 11% of this capped
+surface describing the same actors more than once, so browse shows one per group
+and `filerGroupSize` says how many others share those exact transactions. The
+others are not hidden: each keeps its own profile and is still returned by
+GET /v1/insiders?name=."""
+        params = {
+            "letter": letter,
+            "page": page,
+            "per_page": per_page,
+        }
+        params = {k: str(v) for k, v in params.items() if v is not None}
+        data = self._client._get(f"/v1/insiders/directory", params=params)
+        return InsiderDirectoryResponse._from_dict(data)
+
     def leaderboard(self, *, horizon: str | None = None, order: str | None = None, min_trades: int | None = None, limit: int | None = None) -> InsiderLeaderboardResponse:
         """Ranked leaderboard of insiders by buy track-record (Business plan+)
 
@@ -1650,6 +1782,36 @@ AvgReturn1w, etc.) are stored as FRACTIONS — 0.05 means +5%."""
 class GeneratedAsyncInsidersResource:
     def __init__(self, client) -> None:
         self._client = client
+
+    async def directory(self, *, letter: str | None = None, page: int | None = None, per_page: int | None = None) -> InsiderDirectoryResponse:
+        """Browse insiders alphabetically by surname
+
+        Returns the A-Z rail with a count per letter, plus one page of insiders under the
+requested letter. Omit `letter` to get the rail and totals with no rows.
+
+Names come from EDGAR surname-first ("HENNEMAN JOHN B III"), so alphabetical order
+is order by surname. Casing in the source is inconsistent and is not normalised here.
+
+This lists only insiders with at least 3 non-superseded transactions, capped at the
+5,000 most active — the same set as the insiders sitemap shard, so the two cannot
+drift. To find someone outside that set, use GET /v1/insiders?name= which searches
+every filer. Rebuilt daily; `refreshedAt` reports when. Not plan-gated.
+
+One row per FILER GROUP. A fund group files a single Form 4 listing several
+reporting owners — the fund, its GP, its management company — and each is a real
+EDGAR filer with its own CIK. Listing all of them spent about 11% of this capped
+surface describing the same actors more than once, so browse shows one per group
+and `filerGroupSize` says how many others share those exact transactions. The
+others are not hidden: each keeps its own profile and is still returned by
+GET /v1/insiders?name=."""
+        params = {
+            "letter": letter,
+            "page": page,
+            "per_page": per_page,
+        }
+        params = {k: str(v) for k, v in params.items() if v is not None}
+        data = await self._client._get(f"/v1/insiders/directory", params=params)
+        return InsiderDirectoryResponse._from_dict(data)
 
     async def leaderboard(self, *, horizon: str | None = None, order: str | None = None, min_trades: int | None = None, limit: int | None = None) -> InsiderLeaderboardResponse:
         """Ranked leaderboard of insiders by buy track-record (Business plan+)
