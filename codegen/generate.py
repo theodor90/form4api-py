@@ -49,6 +49,14 @@ SPEC_URL = os.environ.get("FORM4API_OPENAPI_URL", "https://api.form4api.com/open
 # response-less ones are OpenAPI Stage 1b: they return anonymous objects
 # server-side, so there is no schema to bind to. This list shrinks as they gain
 # DTOs.
+from method_name import derive_method_name
+
+
+def method_name_for(operation_id: str, resource: str) -> str:
+    """Override if one is pinned, otherwise derive."""
+    return METHOD_NAME_OVERRIDES.get(operation_id) or derive_method_name(operation_id, resource)
+
+
 SKIP_OPERATIONS = {
     "HealthLive", "HealthReady", "HealthIngestion",
     "CreateCheckout", "CreateBillingPortal", "CreateApiKey",
@@ -87,7 +95,20 @@ TAG_TO_RESOURCE = {
     "Transactions": "transactions",
 }
 
-METHOD_NAMES = {
+# operationId -> method name, as OVERRIDES over the derived default in
+# codegen/method_name.py.
+#
+# This used to be the only source of names and a missing key raised, which is
+# why codegen went hard-down when the backend shipped /v1/filings on
+# 2026-08-04 and /v1/insiders/directory on 2026-08-25: this SDK could not
+# regenerate at all until someone added a line here by hand, and with CI
+# billing-blocked nobody saw it go red. The MCP server never had that problem
+# because it derives a name and treats its map as overrides; this now matches.
+#
+# EVERY name that has already shipped stays pinned here even where the derived
+# value would agree. Deriving them instead would be correct today and a silent
+# breaking rename the day an operationId changes upstream.
+METHOD_NAME_OVERRIDES = {
     "ListCompanies": "list",
     "ListCongressTrades": "trades",
     "ListCongressPoliticians": "politicians",
@@ -251,8 +272,8 @@ def path_params(template: str) -> list[str]:
     return re.findall(r"\{([^}]+)\}", template)
 
 
-def render_method(op: dict, template: str, is_async: bool) -> str:
-    method_name = METHOD_NAMES[op["operationId"]]
+def render_method(op: dict, template: str, is_async: bool, resource: str) -> str:
+    method_name = method_name_for(op["operationId"], resource)
     schema = (
         op.get("responses", {}).get("200", {})
         .get("content", {}).get("application/json", {}).get("schema")
@@ -344,8 +365,8 @@ def main() -> int:
         cls = "Generated" + "".join(p.title() for p in resource.split("_")) + "Resource"
         for is_async, suffix in ((False, ""), (True, "Async")):
             name = cls.replace("Generated", f"Generated{suffix}") if suffix else cls
-            methods = sorted(ops, key=lambda o: METHOD_NAMES[o[0]["operationId"]])
-            body = "\n".join(render_method(op, tpl, is_async) for op, tpl in methods)
+            methods = sorted(ops, key=lambda o: method_name_for(o[0]["operationId"], resource))
+            body = "\n".join(render_method(op, tpl, is_async, resource) for op, tpl in methods)
             classes.append(
                 f"class {name}:\n"
                 f"    def __init__(self, client) -> None:\n"
