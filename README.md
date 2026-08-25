@@ -63,13 +63,13 @@ asyncio.run(main())
 | Resource | Methods |
 |---|---|
 | `client.transactions` | `.list(**params)`, `.paginate(**params)` |
-| `client.insiders` | `.search(name, **params)`, `.get(cik)`, `.list(**params)`, `.transactions(cik, **params)`, `.summary(cik)` *(Pro)*, `.scorecard(cik)` *(Pro)*, `.leaderboard(**params)` *(Business)* |
+| `client.insiders` | `.search(name, **params)`, `.get(cik)`, `.list(**params)`, `.directory(**params)`, `.transactions(cik, **params)`, `.summary(cik)` *(Pro)*, `.scorecard(cik)` *(Pro)*, `.leaderboard(**params)` *(Business)* |
 | `client.companies` | `.get(ticker)`, `.insiders(ticker)`, `.list(**params)` |
 | `client.signals` | `.list(**params)`, `.paginate(**params)`, `.explain(ticker)`, `.sentiment(ticker, **params)` — Business; `.convergence(**params)` — Pro |
 | `client.congress` | `.trades(**params)`, `.politicians(**params)` *(Pro)*, `.politician(id_or_slug)` *(Pro)*, `.ticker(ticker)` *(Pro)* |
 | `client.form144` | `.list(**params)` — Business plan |
 | `client.holdings` | `.list(**params)`, `.managers(**params)` — Business plan |
-| `client.filings` | `.recent(**params)`, `.get(accession_number)` |
+| `client.filings` | `.list(**params)`, `.recent(**params)`, `.get(accession_number)` |
 | `client.stats` | `.get()` — public, no key required |
 | `client.data_quality` | `.get()` — public, no key required |
 | `client.status` | `.history(**params)` |
