@@ -357,6 +357,18 @@ def main() -> int:
             if not resource:
                 skipped.append(f'{oid} (no resource for tag "{tag}")')
                 continue
+            # Names are derived now, not hand-assigned, so two operations on
+            # one resource can collide where a human would have noticed while
+            # typing the second entry. Emitting both would put duplicate
+            # methods in one class, and the later one would silently win.
+            name = method_name_for(oid, resource)
+            for prior_op, _ in by_resource.get(resource, []):
+                if method_name_for(prior_op["operationId"], resource) == name:
+                    raise SystemExit(
+                        f"Derived method name collision: {resource}.{name}() from both "
+                        f'{prior_op["operationId"]} and {oid}. Pin one of them in '
+                        "METHOD_NAME_OVERRIDES."
+                    )
             by_resource.setdefault(resource, []).append((op, template))
 
     classes: list[str] = []
