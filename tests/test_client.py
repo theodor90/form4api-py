@@ -6,6 +6,7 @@ from form4api import (
     Form4ApiClient,
     AuthError,
     NotFoundError,
+    PaginationLimitError,
     PlanError,
     RateLimitError,
     Form4ApiError,
@@ -159,6 +160,117 @@ def test_transactions_paginate_stops_on_short_page(client):
     pages = list(client.transactions.paginate(per_page=1))
     assert len(pages) == 1
     assert pages[0][0].ticker == "AAPL"
+
+
+@respx.mock
+def test_transactions_paginate_raises_pagination_limit_error_after_delivering_prior_pages(client):
+    """The plan-gated pagination-depth 402 is not swallowed: it becomes a
+    PaginationLimitError raised mid-iteration, after every page already
+    yielded has been delivered to the caller."""
+    call = {"n": 0}
+
+    def handler(_request):
+        call["n"] += 1
+        if call["n"] <= 2:
+            return httpx.Response(200, json=[TX, TX])
+        return httpx.Response(
+            402,
+            json={
+                "error": {
+                    "code": "PLAN_REQUIRED",
+                    "message": (
+                        "Page 3 is beyond the Free plan's pagination depth on /v1/transactions "
+                        "(2 pages). The Starter plan reaches 100 pages and Pro removes the limit "
+                        "— upgrade at https://form4api.com/dashboard/billing?from=page_depth_402. "
+                        "For a bulk historical pull, GET /v1/transactions/export (Business plan) "
+                        "streams the full filtered set as CSV instead of paging."
+                    ),
+                    "requestId": "req_test",
+                }
+            },
+        )
+
+    respx.get(f"{BASE}/v1/transactions").mock(side_effect=handler)
+
+    pages = []
+    caught = None
+    try:
+        for page in client.transactions.paginate(per_page=2):
+            pages.append(page)
+    except PaginationLimitError as err:
+        caught = err
+
+    assert len(pages) == 2
+    assert caught is not None
+    assert caught.pages_yielded == 2
+    assert "yielding 2 page(s)" in str(caught)
+    assert "/v1/transactions/export" in str(caught)
+    assert isinstance(caught.__cause__, PlanError)
+
+
+@respx.mock
+def test_transactions_paginate_max_pages_stops_before_depth_limit(client):
+    respx.get(f"{BASE}/v1/transactions").mock(return_value=httpx.Response(200, json=[TX, TX]))
+    pages = list(client.transactions.paginate(per_page=2, max_pages=3))
+    assert len(pages) == 3
+
+
+@respx.mock
+def test_transactions_paginate_does_not_swallow_or_mislabel_non_402_error(client):
+    call = {"n": 0}
+
+    def handler(_request):
+        call["n"] += 1
+        if call["n"] == 1:
+            return httpx.Response(200, json=[TX, TX])
+        return httpx.Response(500, json={})
+
+    respx.get(f"{BASE}/v1/transactions").mock(side_effect=handler)
+
+    pages = []
+    caught = None
+    try:
+        for page in client.transactions.paginate(per_page=2):
+            pages.append(page)
+    except Form4ApiError as err:
+        caught = err
+
+    assert len(pages) == 1
+    assert caught is not None
+    assert not isinstance(caught, PaginationLimitError)
+    assert caught.status_code == 500
+
+
+@respx.mock
+def test_signals_paginate_reraises_non_depth_402_as_plan_error(client):
+    """GET /v1/signals is gated at the whole-endpoint level (Business plan) —
+    this 402 has nothing to do with pagination depth, and must not be
+    rewritten as though it were the depth limit."""
+    respx.get(f"{BASE}/v1/signals").mock(
+        return_value=httpx.Response(
+            402,
+            json={
+                "error": {
+                    "code": "PLAN_REQUIRED",
+                    "message": "This endpoint requires the Business plan or higher. Your current plan is Free.",
+                    "requestId": "req_test",
+                    "requiredPlan": "Business",
+                    "currentPlan": "Free",
+                }
+            },
+        )
+    )
+
+    caught = None
+    try:
+        for _page in client.signals.paginate():
+            pass
+    except PlanError as err:
+        caught = err
+
+    assert caught is not None
+    assert not isinstance(caught, PaginationLimitError)
+    assert caught.required_plan == "Business"
 
 
 # ── insiders ──────────────────────────────────────────────────────────────────
