@@ -84,6 +84,7 @@ class SignalsResource(GeneratedSignalsResource):
                     raise PaginationLimitError(
                         f"signals.paginate() stopped after yielding {pages_yielded} page(s) — {err}",
                         pages_yielded,
+                        err,
                     ) from err
                 raise
 
@@ -145,6 +146,7 @@ class AsyncSignalsResource(GeneratedAsyncSignalsResource):
                     raise PaginationLimitError(
                         f"signals.paginate() stopped after yielding {pages_yielded} page(s) — {err}",
                         pages_yielded,
+                        err,
                     ) from err
                 raise
 

@@ -68,7 +68,7 @@ def is_pagination_depth_error(err: Exception) -> bool:
     return isinstance(err, PlanError) and bool(_PAGINATION_DEPTH_MESSAGE_RE.search(str(err)))
 
 
-class PaginationLimitError(Form4ApiError):
+class PaginationLimitError(PlanError):
     """Raised by `paginate()` (on `transactions` and `signals`) when the backend
     rejects the next page because the calling key's plan has reached its
     pagination depth limit (Free: 20 pages, Starter: 100, Pro+: unlimited).
@@ -77,8 +77,29 @@ class PaginationLimitError(Form4ApiError):
     error only means iteration stopped early, not that any data already
     delivered to the caller was wrong. `pages_yielded` tells you exactly how
     many. The original `PlanError` is chained as `__cause__` (via `raise ... from err`).
+
+    **Subclasses PlanError deliberately.** Before this type existed, `paginate()`
+    raised a plain `PlanError` at the depth limit, so `except PlanError:` was the
+    documented way to handle it. Subclassing keeps every one of those handlers
+    working while letting new code catch the narrower type — and it is the
+    truthful relationship anyway, since this IS a 402 PLAN_REQUIRED. Making it a
+    sibling would break existing callers for no gain.
     """
 
-    def __init__(self, message: str, pages_yielded: int) -> None:
-        super().__init__(message, 402, "PLAN_REQUIRED")
+    def __init__(
+        self,
+        message: str,
+        pages_yielded: int,
+        cause: PlanError | None = None,
+    ) -> None:
+        # Carry the upgrade metadata through from the original 402 where the
+        # backend supplied it, so a caller can link straight to the upgrade page
+        # without unwrapping __cause__ themselves. The depth-limit branch
+        # populates upgrade_url but leaves required_plan/current_plan None.
+        super().__init__(
+            message,
+            cause.required_plan if cause else None,
+            cause.current_plan if cause else None,
+            cause.upgrade_url if cause else None,
+        )
         self.pages_yielded = pages_yielded
