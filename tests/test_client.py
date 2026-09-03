@@ -207,6 +207,17 @@ def test_transactions_paginate_raises_pagination_limit_error_after_delivering_pr
     assert "/v1/transactions/export" in str(caught)
     assert isinstance(caught.__cause__, PlanError)
 
+    # Backward compatibility, and the reason PaginationLimitError subclasses
+    # PlanError rather than sitting beside it. Before this type existed,
+    # paginate() raised a plain PlanError here, so `except PlanError:` was the
+    # documented way to handle the depth limit. If this assertion ever fails,
+    # every caller written against the old behaviour is silently no longer
+    # catching this — an uncaught exception rather than a handled upgrade path.
+    assert isinstance(caught, PlanError)
+    # The upgrade metadata is carried through from the original 402 so callers
+    # do not have to unwrap __cause__ to find it.
+    assert caught.upgrade_url == caught.__cause__.upgrade_url
+
 
 @respx.mock
 def test_transactions_paginate_max_pages_stops_before_depth_limit(client):

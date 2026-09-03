@@ -157,6 +157,7 @@ class TransactionsResource:
                     raise PaginationLimitError(
                         f"transactions.paginate() stopped after yielding {pages_yielded} page(s) — {err}",
                         pages_yielded,
+                        err,
                     ) from err
                 raise
 
@@ -256,6 +257,7 @@ class AsyncTransactionsResource:
                     raise PaginationLimitError(
                         f"transactions.paginate() stopped after yielding {pages_yielded} page(s) — {err}",
                         pages_yielded,
+                        err,
                     ) from err
                 raise
 
