@@ -1,5 +1,12 @@
 from form4api._client import AsyncForm4ApiClient, Form4ApiClient
-from form4api._errors import AuthError, Form4ApiError, NotFoundError, PlanError, RateLimitError
+from form4api._errors import (
+    AuthError,
+    Form4ApiError,
+    NotFoundError,
+    PaginationLimitError,
+    PlanError,
+    RateLimitError,
+)
 from form4api._types import (
     Company,
     Insider,
@@ -17,6 +24,7 @@ __all__ = [
     "Form4ApiError",
     "AuthError",
     "PlanError",
+    "PaginationLimitError",
     "NotFoundError",
     "RateLimitError",
     "Transaction",

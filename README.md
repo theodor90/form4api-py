@@ -164,27 +164,52 @@ client.transactions.list(min_shares=10_000, max_shares=100_000)
 
 ### Pagination
 
+`paginate()` pages through the data until it runs out (a short or empty page)
+or, since the backend's 2026-08-01 plan-gated pagination depth (Free: 20
+pages, Starter: 100, Pro+: unlimited), the next page is rejected with a 402.
+That 402 is not swallowed — it raises `PaginationLimitError` mid-iteration,
+after every page already yielded has been delivered to your loop. Pages you
+already received are real and complete; the error only means iteration
+stopped early. Pass `max_pages` to stop deliberately before that ever
+happens, or catch `PaginationLimitError` to know when a Free/Starter key ran
+out of depth on a bulk pull:
+
 ```python
+from form4api import PaginationLimitError
+
 # transactions.paginate() — yields one list per page automatically
 all_txns = []
-for batch in client.transactions.paginate(ticker="NVDA", exclude_10b5=True, per_page=100):
-    all_txns.extend(batch)
+try:
+    for batch in client.transactions.paginate(ticker="NVDA", exclude_10b5=True, per_page=100):
+        all_txns.extend(batch)
+except PaginationLimitError as e:
+    print(f"Stopped after {e.pages_yielded} pages — {e}")
+    # all_txns still holds every page yielded before the limit hit
 
 # signals.paginate()
 all_signals = []
-for batch in client.signals.paginate(cluster_buy=True, per_page=100):
+for batch in client.signals.paginate(cluster_buy=True, per_page=100, max_pages=10):
     all_signals.extend(batch)
 ```
 
 ## Error handling
 
 ```python
-from form4api import Form4ApiClient, AuthError, PlanError, RateLimitError, NotFoundError
+from form4api import (
+    Form4ApiClient,
+    AuthError,
+    PlanError,
+    PaginationLimitError,
+    RateLimitError,
+    NotFoundError,
+)
 
 client = Form4ApiClient("YOUR_API_KEY")
 
 try:
     signals = client.signals.list()
+except PaginationLimitError as e:
+    print(f"Paginate stopped after {e.pages_yielded} pages — upgrade to go deeper")
 except PlanError as e:
     print(f"Upgrade required")
 except RateLimitError as e:

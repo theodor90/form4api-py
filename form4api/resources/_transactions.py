@@ -3,6 +3,7 @@
 from collections.abc import AsyncGenerator, Generator
 from typing import TYPE_CHECKING
 
+from form4api._errors import PaginationLimitError, PlanError, is_pagination_depth_error
 from form4api._types import Transaction
 
 if TYPE_CHECKING:
@@ -121,23 +122,48 @@ class TransactionsResource:
         min_shares: float | None = None,
         max_shares: float | None = None,
         per_page: int = 50,
+        max_pages: int | None = None,
     ) -> Generator[list[Transaction], None, None]:
+        """Pages through /v1/transactions until the data runs out (a short or
+        empty page) or, since the backend's 2026-08-01 plan-gated pagination
+        depth (Free: 20 pages, Starter: 100, Pro+: unlimited), the next page is
+        rejected with a 402. That 402 is NOT swallowed — a scripted caller who
+        silently stopped there would see what looks like "no more data" and
+        never learn their dataset was truncated. Instead this raises
+        `PaginationLimitError` mid-iteration, after every page already yielded
+        has been delivered to the caller. Pass `max_pages` to stop deliberately
+        before that ever happens.
+        """
         page = 1
+        pages_yielded = 0
         while True:
-            batch = self.list(
-                ticker=ticker, cik=cik, insider_cik=insider_cik,
-                code=code, from_date=from_date, to_date=to_date,
-                exclude_10b5=exclude_10b5,
-                codes=codes, exclude_codes=exclude_codes,
-                category=category, exclude_category=exclude_category,
-                exclude_derivative=exclude_derivative, significant=significant,
-                min_value=min_value, max_value=max_value,
-                min_shares=min_shares, max_shares=max_shares,
-                page=page, per_page=per_page,
-            )
+            if max_pages is not None and pages_yielded >= max_pages:
+                break
+
+            try:
+                batch = self.list(
+                    ticker=ticker, cik=cik, insider_cik=insider_cik,
+                    code=code, from_date=from_date, to_date=to_date,
+                    exclude_10b5=exclude_10b5,
+                    codes=codes, exclude_codes=exclude_codes,
+                    category=category, exclude_category=exclude_category,
+                    exclude_derivative=exclude_derivative, significant=significant,
+                    min_value=min_value, max_value=max_value,
+                    min_shares=min_shares, max_shares=max_shares,
+                    page=page, per_page=per_page,
+                )
+            except PlanError as err:
+                if is_pagination_depth_error(err):
+                    raise PaginationLimitError(
+                        f"transactions.paginate() stopped after yielding {pages_yielded} page(s) — {err}",
+                        pages_yielded,
+                    ) from err
+                raise
+
             if not batch:
                 break
             yield batch
+            pages_yielded += 1
             if len(batch) < per_page:
                 break
             page += 1
@@ -205,21 +231,38 @@ class AsyncTransactionsResource:
         min_shares: float | None = None,
         max_shares: float | None = None,
         per_page: int = 50,
+        max_pages: int | None = None,
     ) -> AsyncGenerator[list[Transaction], None]:
+        """Async twin of `TransactionsResource.paginate` — same depth-limit
+        semantics, see there for the full rationale."""
         page = 1
+        pages_yielded = 0
         while True:
-            batch = await self.list(
-            ticker=ticker, cik=cik, insider_cik=insider_cik, code=code,
-            from_date=from_date, to_date=to_date, exclude_10b5=exclude_10b5,
-            codes=codes, exclude_codes=exclude_codes, category=category,
-            exclude_category=exclude_category, exclude_derivative=exclude_derivative,
-            significant=significant, min_value=min_value, max_value=max_value,
-            min_shares=min_shares, max_shares=max_shares,
-                page=page, per_page=per_page,
-            )
+            if max_pages is not None and pages_yielded >= max_pages:
+                break
+
+            try:
+                batch = await self.list(
+                    ticker=ticker, cik=cik, insider_cik=insider_cik, code=code,
+                    from_date=from_date, to_date=to_date, exclude_10b5=exclude_10b5,
+                    codes=codes, exclude_codes=exclude_codes, category=category,
+                    exclude_category=exclude_category, exclude_derivative=exclude_derivative,
+                    significant=significant, min_value=min_value, max_value=max_value,
+                    min_shares=min_shares, max_shares=max_shares,
+                    page=page, per_page=per_page,
+                )
+            except PlanError as err:
+                if is_pagination_depth_error(err):
+                    raise PaginationLimitError(
+                        f"transactions.paginate() stopped after yielding {pages_yielded} page(s) — {err}",
+                        pages_yielded,
+                    ) from err
+                raise
+
             if not batch:
                 break
             yield batch
+            pages_yielded += 1
             if len(batch) < per_page:
                 break
             page += 1
