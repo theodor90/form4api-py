@@ -1,6 +1,6 @@
 # form4api
 
-Python client for [Form4API](https://www.form4api.com) — real-time SEC Form 4 insider trading data.
+Python client for [Form4API](https://www.form4api.com) — real-time SEC Form 4 insider trading, Form 144 intent-to-sell, institutional 13F-HR, and congressional STOCK Act trading data, including the insider/Congress convergence signal.
 
 [![PyPI version](https://img.shields.io/pypi/v/form4api.svg)](https://pypi.org/project/form4api/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/form4api.svg)](https://pypi.org/project/form4api/)
