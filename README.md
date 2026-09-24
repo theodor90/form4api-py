@@ -89,16 +89,21 @@ For LLM workflows, `form4api-mcp` exposes the same endpoints as tools.
 
 ```python
 client.transactions.list(
-    ticker="AAPL",        # filter by ticker
+    ticker="AAPL",        # filter by ticker — accepts up to 25 comma-separated symbols
     cik="0000320193",     # or by company CIK
     insider_cik="...",    # filter by insider CIK
     code="P",             # transaction code: P=purchase, S=sale, A=grant, etc.
     from_date="2026-01-01",
     to_date="2026-12-31",
+    filed_from="2026-01-01",  # filters on Filing.FiledAt (when it hit EDGAR), not the trade date
+    filed_to="2026-12-31",
     exclude_10b5=True,    # omit trades filed under a Rule 10b5-1 plan
     per_page=100,
     page=1,
 )
+
+# Multi-ticker lookup in one call
+client.transactions.list(ticker="AAPL,MSFT,NVDA")
 ```
 
 ### Granular filtering (v0.4.0+)
@@ -147,6 +152,11 @@ client.transactions.list(min_shares=10_000, max_shares=100_000)
 | `is_derivative` | `bool` | Derivative security flag |
 | `transaction_date` | `str` | ISO datetime |
 | `period_of_report` | `str` | ISO datetime |
+| `return1d`/`return1w`/`return1m`/`return3m`/`return6m` | `float \| None` | Forward return since the transaction date, as a fraction (0.109 = +10.9%); `None` until enough time/price data has elapsed |
+| `value_quality` | `str \| None` | Confidence flag on `total_value`'s pricing source |
+| `accepted_at` | `str \| None` | Precise UTC SEC-acceptance instant; `None` if not captured |
+| `document_url` | `str \| None` | Public SEC document URL |
+| `institutional_ownership` | `InstitutionalOwnership \| None` | Latest 13F institutional ownership snapshot for the ticker, when available |
 
 ### Company fields
 

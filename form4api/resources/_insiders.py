@@ -56,7 +56,7 @@ class InsidersResource(GeneratedInsidersResource):
     ) -> list[Transaction]:
         params = _transactions_params(from_date, to_date, page, per_page)
         data = self._client._get(f"/v1/insiders/{cik}/transactions", params)
-        return [Transaction(**item) for item in data]
+        return [Transaction._from_dict(item) for item in data]
 
 
 class AsyncInsidersResource(GeneratedAsyncInsidersResource):
@@ -84,7 +84,7 @@ class AsyncInsidersResource(GeneratedAsyncInsidersResource):
     ) -> list[Transaction]:
         params = _transactions_params(from_date, to_date, page, per_page)
         data = await self._client._get(f"/v1/insiders/{cik}/transactions", params)
-        return [Transaction(**item) for item in data]
+        return [Transaction._from_dict(item) for item in data]
 
 
 

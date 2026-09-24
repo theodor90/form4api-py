@@ -152,6 +152,66 @@ def test_transactions_list_sends_granular_filters(client):
 
 
 @respx.mock
+def test_transactions_list_sends_filed_from_and_filed_to(client):
+    """filed_from/filed_to filter on Filing.FiledAt, separate from the
+    transaction-date from_date/to_date pair."""
+    route = respx.get(f"{BASE}/v1/transactions").mock(return_value=httpx.Response(200, json=[]))
+    client.transactions.list(
+        ticker="AAPL,MSFT,NVDA",
+        filed_from="2026-01-01",
+        filed_to="2026-01-31",
+    )
+    assert route.called
+    qs = dict(route.calls[0].request.url.params)
+    assert qs["ticker"] == "AAPL,MSFT,NVDA"
+    assert qs["filed_from"] == "2026-01-01"
+    assert qs["filed_to"] == "2026-01-31"
+
+
+@respx.mock
+def test_transactions_list_hydrates_new_fields(client):
+    """acceptedAt/documentUrl and the nested institutionalOwnership object
+    hydrate onto the Transaction dataclass instead of raising or staying a
+    raw dict."""
+    tx = {
+        **TX,
+        "return1d": 0.012,
+        "return1w": None,
+        "valueQuality": "high",
+        "acceptedAt": "2026-01-15T21:03:00Z",
+        "documentUrl": "https://www.sec.gov/Archives/edgar/data/1/doc.xml",
+        "institutionalOwnership": {
+            "quarter": "2025-12-31T00:00:00Z",
+            "totalAumUsd": 1_000_000.0,
+            "deltaQoqPct": 0.05,
+            "trend": "increasing",
+            "topHolders": [
+                {"managerCik": "0001", "managerName": "Big Fund", "shares": 100.0, "value": 200.0}
+            ],
+            "coverageIncomplete": False,
+        },
+    }
+    respx.get(f"{BASE}/v1/transactions").mock(return_value=httpx.Response(200, json=[tx]))
+    result = client.transactions.list()[0]
+    assert result.accepted_at == "2026-01-15T21:03:00Z"
+    assert result.document_url == "https://www.sec.gov/Archives/edgar/data/1/doc.xml"
+    assert result.value_quality == "high"
+    assert result.return1d == 0.012
+    assert result.institutional_ownership.total_aum_usd == 1_000_000.0
+    assert result.institutional_ownership.top_holders[0].manager_name == "Big Fund"
+
+
+@respx.mock
+def test_transactions_list_tolerates_missing_new_fields(client):
+    """A payload from before the new fields shipped (no acceptedAt/documentUrl/
+    institutionalOwnership) still parses — everything new is optional."""
+    respx.get(f"{BASE}/v1/transactions").mock(return_value=httpx.Response(200, json=[TX]))
+    result = client.transactions.list()[0]
+    assert result.accepted_at is None
+    assert result.institutional_ownership is None
+
+
+@respx.mock
 def test_transactions_paginate_stops_on_short_page(client):
     respx.get(f"{BASE}/v1/transactions").mock(side_effect=[
         httpx.Response(200, json=[TX]),
