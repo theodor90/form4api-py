@@ -1,6 +1,39 @@
 ﻿from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
+
+
+@dataclass
+class TopHolder:
+    manager_cik: str | None = None
+    manager_name: str | None = None
+    shares: float | None = None
+    value: float | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "TopHolder":
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class InstitutionalOwnership:
+    quarter: str | None = None
+    total_aum_usd: float | None = None
+    delta_qoq_pct: float | None = None
+    trend: str | None = None
+    top_holders: list[TopHolder] | None = None
+    coverage_incomplete: bool | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "InstitutionalOwnership":
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("top_holders"), list):
+            kwargs["top_holders"] = [
+                TopHolder._from_dict(i) if isinstance(i, dict) else i for i in kwargs["top_holders"]
+            ]
+        return cls(**kwargs)
 
 
 @dataclass
@@ -26,6 +59,32 @@ class Transaction:
     is_derivative: bool
     transaction_date: str
     period_of_report: str
+    # Added 2026-09-24: return columns, source-quality flag, SEC acceptance
+    # timestamp, and the public document URL. All optional so an older SDK
+    # keeps working against a payload that doesn't send them, and a newer
+    # backend can add more without breaking this dataclass's constructor.
+    return1d: float | None = None
+    return1w: float | None = None
+    return1m: float | None = None
+    return3m: float | None = None
+    return6m: float | None = None
+    value_quality: str | None = None
+    accepted_at: str | None = None
+    document_url: str | None = None
+    institutional_ownership: InstitutionalOwnership | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "Transaction":
+        """Build from an API payload, ignoring unknown keys and hydrating the
+        nested `institutional_ownership` object instead of leaving it a raw
+        dict (see codegen/generate.py for the history of that bug)."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("institutional_ownership"), dict):
+            kwargs["institutional_ownership"] = InstitutionalOwnership._from_dict(
+                kwargs["institutional_ownership"]
+            )
+        return cls(**kwargs)
 
 
 @dataclass

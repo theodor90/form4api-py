@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from collections.abc import AsyncGenerator, Generator
 from typing import TYPE_CHECKING
@@ -18,6 +18,8 @@ def _list_params(
         code: str | None = None,
         from_date: str | None = None,
         to_date: str | None = None,
+        filed_from: str | None = None,
+        filed_to: str | None = None,
         exclude_10b5: bool | None = None,
         codes: str | None = None,
         exclude_codes: str | None = None,
@@ -34,14 +36,16 @@ def _list_params(
 ) -> dict[str, str]:
     """Shared by the sync and async twins.
 
-    Eighteen optional filters is exactly the kind of block that drifts when it
+    Twenty optional filters is exactly the kind of block that drifts when it
     is copy-pasted, so it lives in one place and both twins call it. Only the
     signature is duplicated, and only because that is what preserves type hints.
     """
     params: dict[str, str] = {"page": str(page), "per_page": str(per_page)}
     for key, value in (
         ("ticker", ticker), ("cik", cik), ("insider_cik", insider_cik), ("code", code),
-        ("from", from_date), ("to", to_date), ("codes", codes),
+        ("from", from_date), ("to", to_date),
+        ("filed_from", filed_from), ("filed_to", filed_to),
+        ("codes", codes),
         ("exclude_codes", exclude_codes), ("category", category),
         ("exclude_category", exclude_category),
     ):
@@ -75,6 +79,8 @@ class TransactionsResource:
         code: str | None = None,
         from_date: str | None = None,
         to_date: str | None = None,
+        filed_from: str | None = None,
+        filed_to: str | None = None,
         exclude_10b5: bool | None = None,
         codes: str | None = None,
         exclude_codes: str | None = None,
@@ -89,9 +95,20 @@ class TransactionsResource:
         page: int = 1,
         per_page: int = 50,
     ) -> list[Transaction]:
+        """List transactions.
+
+        `ticker` accepts up to 25 comma-separated symbols (e.g.
+        `ticker="AAPL,MSFT,NVDA"`), same convention as `codes`/`exclude_codes`.
+        `filed_from`/`filed_to` filter on Filing.FiledAt (inclusive) — the date
+        the filing hit EDGAR — as opposed to `from_date`/`to_date`, which filter
+        on the transaction's own reported date. Accepts a date or ISO string,
+        same as `from_date`/`to_date`.
+        """
         params = _list_params(
             ticker=ticker, cik=cik, insider_cik=insider_cik, code=code,
-            from_date=from_date, to_date=to_date, exclude_10b5=exclude_10b5,
+            from_date=from_date, to_date=to_date,
+            filed_from=filed_from, filed_to=filed_to,
+            exclude_10b5=exclude_10b5,
             codes=codes, exclude_codes=exclude_codes, category=category,
             exclude_category=exclude_category, exclude_derivative=exclude_derivative,
             significant=significant, min_value=min_value, max_value=max_value,
@@ -99,7 +116,7 @@ class TransactionsResource:
             page=page, per_page=per_page,
         )
         data = self._client._get("/v1/transactions", params)
-        return [Transaction(**item) for item in data]
+        return [Transaction._from_dict(item) for item in data]
 
     def paginate(
         self,
@@ -110,6 +127,8 @@ class TransactionsResource:
         code: str | None = None,
         from_date: str | None = None,
         to_date: str | None = None,
+        filed_from: str | None = None,
+        filed_to: str | None = None,
         exclude_10b5: bool | None = None,
         codes: str | None = None,
         exclude_codes: str | None = None,
@@ -144,6 +163,7 @@ class TransactionsResource:
                 batch = self.list(
                     ticker=ticker, cik=cik, insider_cik=insider_cik,
                     code=code, from_date=from_date, to_date=to_date,
+                    filed_from=filed_from, filed_to=filed_to,
                     exclude_10b5=exclude_10b5,
                     codes=codes, exclude_codes=exclude_codes,
                     category=category, exclude_category=exclude_category,
@@ -185,6 +205,8 @@ class AsyncTransactionsResource:
         code: str | None = None,
         from_date: str | None = None,
         to_date: str | None = None,
+        filed_from: str | None = None,
+        filed_to: str | None = None,
         exclude_10b5: bool | None = None,
         codes: str | None = None,
         exclude_codes: str | None = None,
@@ -199,9 +221,12 @@ class AsyncTransactionsResource:
         page: int = 1,
         per_page: int = 50,
     ) -> list[Transaction]:
+        """See `TransactionsResource.list` for `ticker`/`filed_from`/`filed_to` semantics."""
         params = _list_params(
             ticker=ticker, cik=cik, insider_cik=insider_cik, code=code,
-            from_date=from_date, to_date=to_date, exclude_10b5=exclude_10b5,
+            from_date=from_date, to_date=to_date,
+            filed_from=filed_from, filed_to=filed_to,
+            exclude_10b5=exclude_10b5,
             codes=codes, exclude_codes=exclude_codes, category=category,
             exclude_category=exclude_category, exclude_derivative=exclude_derivative,
             significant=significant, min_value=min_value, max_value=max_value,
@@ -209,7 +234,7 @@ class AsyncTransactionsResource:
             page=page, per_page=per_page,
         )
         data = await self._client._get("/v1/transactions", params)
-        return [Transaction(**item) for item in data]
+        return [Transaction._from_dict(item) for item in data]
 
     async def paginate(
         self,
@@ -220,6 +245,8 @@ class AsyncTransactionsResource:
         code: str | None = None,
         from_date: str | None = None,
         to_date: str | None = None,
+        filed_from: str | None = None,
+        filed_to: str | None = None,
         exclude_10b5: bool | None = None,
         codes: str | None = None,
         exclude_codes: str | None = None,
@@ -245,7 +272,9 @@ class AsyncTransactionsResource:
             try:
                 batch = await self.list(
                     ticker=ticker, cik=cik, insider_cik=insider_cik, code=code,
-                    from_date=from_date, to_date=to_date, exclude_10b5=exclude_10b5,
+                    from_date=from_date, to_date=to_date,
+                    filed_from=filed_from, filed_to=filed_to,
+                    exclude_10b5=exclude_10b5,
                     codes=codes, exclude_codes=exclude_codes, category=category,
                     exclude_category=exclude_category, exclude_derivative=exclude_derivative,
                     significant=significant, min_value=min_value, max_value=max_value,

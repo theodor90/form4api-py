@@ -469,6 +469,47 @@ class DirectoryLetter:
 
 
 @dataclass
+class ErrorDetail:
+    code: str | None = None
+    current_plan: str | None = None
+    message: str | None = None
+    reason: str | None = None
+    request_id: str | None = None
+    required_plan: str | None = None
+    upgrade_url: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "ErrorDetail":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class ErrorResponse:
+    """Standard error envelope returned by every non-2xx response."""
+
+    error: ErrorDetail | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "ErrorResponse":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("error"), dict):
+            kwargs["error"] = ErrorDetail._from_dict(kwargs["error"])
+        return cls(**kwargs)
+
+
+@dataclass
 class ExcludedTradeEntry:
     code: str | None = None
     insider_cik: str | None = None
@@ -490,10 +531,12 @@ class ExcludedTradeEntry:
 
 @dataclass
 class FilingResponse:
+    accepted_at: str | None = None
     accession_number: str | None = None
     amendment_type: str | None = None
     company_name: str | None = None
     company_ticker: str | None = None
+    document_url: str | None = None
     filed_at: str | None = None
     period_of_report: str | None = None
     transaction_count: int | None = None
@@ -517,13 +560,16 @@ class Form144Response:
     approx_sale_date: str | None = None
     broker: str | None = None
     company_name: str | None = None
+    document_url: str | None = None
     exchange: str | None = None
     filed_at: str | None = None
+    filer_cik: str | None = None
     insider_name: str | None = None
     is_under10b5_plan: bool | None = None
     nature_of_acquisition: str | None = None
     notice_date: str | None = None
     relationship: str | None = None
+    securities_class_title: str | None = None
     shares_proposed: float | None = None
     ticker: str | None = None
 
@@ -1020,6 +1066,32 @@ class ReturnsCoverage:
 
 
 @dataclass
+class Schedule13DGResponse:
+    accession_number: str | None = None
+    company_name: str | None = None
+    event_date: str | None = None
+    filed_at: str | None = None
+    filer_cik: str | None = None
+    filer_name: str | None = None
+    form_type: str | None = None
+    is_amendment: bool | None = None
+    ownership_percent: float | None = None
+    reporting_person_type: str | None = None
+    shares_owned: float | None = None
+    ticker: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "Schedule13DGResponse":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
 class ScorecardTradeRef:
     filed_at: str | None = None
     return3m: float | None = None
@@ -1195,9 +1267,11 @@ class TopHolderDto:
 
 @dataclass
 class TransactionResponse:
+    accepted_at: str | None = None
     accession_number: str | None = None
     company_name: str | None = None
     direct_indirect: str | None = None
+    document_url: str | None = None
     insider_cik: str | None = None
     insider_name: str | None = None
     insider_title: str | None = None
@@ -1344,13 +1418,14 @@ class GeneratedCongressResource:
         data = self._client._get(f"/v1/congress/politicians/{id_or_slug}", params=params)
         return CongressPoliticianProfileResponse._from_dict(data)
 
-    def politicians(self, *, page: int | None = None, per_page: int | None = None) -> list[CongressPoliticianRollupDto]:
+    def politicians(self, *, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[CongressPoliticianRollupDto]:
         """Ranked rollup of politicians by congressional trade activity (Pro plan+)
 
-        Returns a paginated list of politicians who have at least one non-superseded congressional trade, each with total/buy/sell counts (sells include both Sale and PartialSale; Exchange trades count only toward total) and their most recent trade's disclosure date. Ordered by total trade count descending, ties broken by most recently disclosed. Use this to discover active traders; for one politician's full profile (including their most-traded tickers and recent trades) use GET /v1/congress/politicians/{idOrSlug}. Requires Pro plan or higher (402 PLAN_REQUIRED on Free/Starter). Query runs live — no caching."""
+        Returns a paginated list of politicians who have at least one non-superseded congressional trade, each with total/buy/sell counts (sells include both Sale and PartialSale; Exchange trades count only toward total) and their most recent trade's disclosure date. Ordered by total trade count descending, ties broken by most recently disclosed. Use this to discover active traders; for one politician's full profile (including their most-traded tickers and recent trades) use GET /v1/congress/politicians/{idOrSlug}. Requires Pro plan or higher (402 PLAN_REQUIRED on Free/Starter). `limit` is accepted as an alias for `per_page`. Query runs live — no caching."""
         params = {
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = self._client._get(f"/v1/congress/politicians", params=params)
@@ -1367,10 +1442,10 @@ class GeneratedCongressResource:
         data = self._client._get(f"/v1/congress/tickers/{ticker}", params=params)
         return CongressTickerRollupResponse._from_dict(data)
 
-    def trades(self, *, ticker: str | None = None, politician: str | None = None, party: str | None = None, chamber: str | None = None, state: str | None = None, transaction_type: str | None = None, min_amount: float | None = None, transaction_date_from: str | None = None, transaction_date_to: str | None = None, disclosure_date_from: str | None = None, disclosure_date_to: str | None = None, page: int | None = None, per_page: int | None = None) -> list[CongressTradeDto]:
+    def trades(self, *, ticker: str | None = None, politician: str | None = None, party: str | None = None, chamber: str | None = None, state: str | None = None, transaction_type: str | None = None, min_amount: float | None = None, transaction_date_from: str | None = None, transaction_date_to: str | None = None, disclosure_date_from: str | None = None, disclosure_date_to: str | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[CongressTradeDto]:
         """Query congressional STOCK Act trades (Free+, plan-clamped disclosure window)
 
-        Returns a paginated JSON list of congressional periodic-transaction-report trades, most recently DISCLOSED first, with non-superseded rows only (amended-away rows never appear). COVERAGE — HOUSE ONLY TODAY: every trade in this dataset comes from the U.S. House Clerk's PTR index. Senate eFD (efdsearch.senate.gov) returns 403 to datacenter traffic, so no Senate filings are ingested yet. chamber=Senate remains a valid filter but matches nothing and returns the response header X-Coverage-Note: chamber-not-covered, so an empty result is never ambiguous. Scanning by chamber should treat that header as "not covered", not as "no trades". PLAN-CLAMPED WINDOW: this endpoint is open to every plan, but how far back you can see is clamped on disclosureDate — Free sees only trades disclosed in the last 30 days, Starter the last 366 days, Pro/Business/Enterprise unlimited history. Passing an older disclosure_date_from than your plan allows does not extend the window — the floor always wins. Filters: ticker, politician (bioguideId, exact), party (free-text, case-insensitive exact match — not a fixed enum), chamber (House|Senate — see the coverage note above), state (2-letter code), transaction_type (purchase|sale|partial_sale|exchange), min_amount (range-aware — matches AmountLow >= value, never a fabricated midpoint), transaction_date_from/to, disclosure_date_from/to. Every row always carries BOTH amountLow and amountHigh (STOCK Act discloses ranges, never exact figures) and disclosureLagDays = (disclosureDate - transactionDate) — the STOCK Act allows up to 45 days of lag, so "real-time" here means minutes-after-disclosure, not minutes-after-trade. For per-politician or per-ticker rollups use GET /v1/congress/politicians, /v1/congress/politicians/{idOrSlug}, or /v1/congress/tickers/{ticker} (all Pro+). Query runs live against the database — no caching."""
+        Returns a paginated JSON list of congressional periodic-transaction-report trades, most recently DISCLOSED first, with non-superseded rows only (amended-away rows never appear). COVERAGE — HOUSE ONLY TODAY: every trade in this dataset comes from the U.S. House Clerk's PTR index. Senate eFD (efdsearch.senate.gov) returns 403 to datacenter traffic, so no Senate filings are ingested yet. chamber=Senate remains a valid filter but matches nothing and returns the response header X-Coverage-Note: chamber-not-covered, so an empty result is never ambiguous. Scanning by chamber should treat that header as "not covered", not as "no trades". PLAN-CLAMPED WINDOW: this endpoint is open to every plan, but how far back you can see is clamped on disclosureDate — Free sees only trades disclosed in the last 30 days, Starter the last 366 days, Pro/Business/Enterprise unlimited history. Passing an older disclosure_date_from than your plan allows does not extend the window — the floor always wins. Filters: ticker, politician (bioguideId, exact), party (free-text, case-insensitive exact match — not a fixed enum), chamber (House|Senate — see the coverage note above), state (2-letter code), transaction_type (purchase|sale|partial_sale|exchange), min_amount (range-aware — matches AmountLow >= value, never a fabricated midpoint), transaction_date_from/to, disclosure_date_from/to. Every row always carries BOTH amountLow and amountHigh (STOCK Act discloses ranges, never exact figures) and disclosureLagDays = (disclosureDate - transactionDate) — the STOCK Act allows up to 45 days of lag, so "real-time" here means minutes-after-disclosure, not minutes-after-trade. For per-politician or per-ticker rollups use GET /v1/congress/politicians, /v1/congress/politicians/{idOrSlug}, or /v1/congress/tickers/{ticker} (all Pro+). To check whether an insider cluster-buy lines up with a congressional purchase in the same ticker, use GET /v1/signals/convergence (Pro+); for the company's own profile use GET /v1/companies/{ticker} (Free). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching."""
         params = {
             "ticker": ticker,
             "politician": politician,
@@ -1385,6 +1460,7 @@ class GeneratedCongressResource:
             "disclosure_date_to": disclosure_date_to,
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = self._client._get(f"/v1/congress/trades", params=params)
@@ -1407,13 +1483,14 @@ class GeneratedAsyncCongressResource:
         data = await self._client._get(f"/v1/congress/politicians/{id_or_slug}", params=params)
         return CongressPoliticianProfileResponse._from_dict(data)
 
-    async def politicians(self, *, page: int | None = None, per_page: int | None = None) -> list[CongressPoliticianRollupDto]:
+    async def politicians(self, *, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[CongressPoliticianRollupDto]:
         """Ranked rollup of politicians by congressional trade activity (Pro plan+)
 
-        Returns a paginated list of politicians who have at least one non-superseded congressional trade, each with total/buy/sell counts (sells include both Sale and PartialSale; Exchange trades count only toward total) and their most recent trade's disclosure date. Ordered by total trade count descending, ties broken by most recently disclosed. Use this to discover active traders; for one politician's full profile (including their most-traded tickers and recent trades) use GET /v1/congress/politicians/{idOrSlug}. Requires Pro plan or higher (402 PLAN_REQUIRED on Free/Starter). Query runs live — no caching."""
+        Returns a paginated list of politicians who have at least one non-superseded congressional trade, each with total/buy/sell counts (sells include both Sale and PartialSale; Exchange trades count only toward total) and their most recent trade's disclosure date. Ordered by total trade count descending, ties broken by most recently disclosed. Use this to discover active traders; for one politician's full profile (including their most-traded tickers and recent trades) use GET /v1/congress/politicians/{idOrSlug}. Requires Pro plan or higher (402 PLAN_REQUIRED on Free/Starter). `limit` is accepted as an alias for `per_page`. Query runs live — no caching."""
         params = {
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = await self._client._get(f"/v1/congress/politicians", params=params)
@@ -1430,10 +1507,10 @@ class GeneratedAsyncCongressResource:
         data = await self._client._get(f"/v1/congress/tickers/{ticker}", params=params)
         return CongressTickerRollupResponse._from_dict(data)
 
-    async def trades(self, *, ticker: str | None = None, politician: str | None = None, party: str | None = None, chamber: str | None = None, state: str | None = None, transaction_type: str | None = None, min_amount: float | None = None, transaction_date_from: str | None = None, transaction_date_to: str | None = None, disclosure_date_from: str | None = None, disclosure_date_to: str | None = None, page: int | None = None, per_page: int | None = None) -> list[CongressTradeDto]:
+    async def trades(self, *, ticker: str | None = None, politician: str | None = None, party: str | None = None, chamber: str | None = None, state: str | None = None, transaction_type: str | None = None, min_amount: float | None = None, transaction_date_from: str | None = None, transaction_date_to: str | None = None, disclosure_date_from: str | None = None, disclosure_date_to: str | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[CongressTradeDto]:
         """Query congressional STOCK Act trades (Free+, plan-clamped disclosure window)
 
-        Returns a paginated JSON list of congressional periodic-transaction-report trades, most recently DISCLOSED first, with non-superseded rows only (amended-away rows never appear). COVERAGE — HOUSE ONLY TODAY: every trade in this dataset comes from the U.S. House Clerk's PTR index. Senate eFD (efdsearch.senate.gov) returns 403 to datacenter traffic, so no Senate filings are ingested yet. chamber=Senate remains a valid filter but matches nothing and returns the response header X-Coverage-Note: chamber-not-covered, so an empty result is never ambiguous. Scanning by chamber should treat that header as "not covered", not as "no trades". PLAN-CLAMPED WINDOW: this endpoint is open to every plan, but how far back you can see is clamped on disclosureDate — Free sees only trades disclosed in the last 30 days, Starter the last 366 days, Pro/Business/Enterprise unlimited history. Passing an older disclosure_date_from than your plan allows does not extend the window — the floor always wins. Filters: ticker, politician (bioguideId, exact), party (free-text, case-insensitive exact match — not a fixed enum), chamber (House|Senate — see the coverage note above), state (2-letter code), transaction_type (purchase|sale|partial_sale|exchange), min_amount (range-aware — matches AmountLow >= value, never a fabricated midpoint), transaction_date_from/to, disclosure_date_from/to. Every row always carries BOTH amountLow and amountHigh (STOCK Act discloses ranges, never exact figures) and disclosureLagDays = (disclosureDate - transactionDate) — the STOCK Act allows up to 45 days of lag, so "real-time" here means minutes-after-disclosure, not minutes-after-trade. For per-politician or per-ticker rollups use GET /v1/congress/politicians, /v1/congress/politicians/{idOrSlug}, or /v1/congress/tickers/{ticker} (all Pro+). Query runs live against the database — no caching."""
+        Returns a paginated JSON list of congressional periodic-transaction-report trades, most recently DISCLOSED first, with non-superseded rows only (amended-away rows never appear). COVERAGE — HOUSE ONLY TODAY: every trade in this dataset comes from the U.S. House Clerk's PTR index. Senate eFD (efdsearch.senate.gov) returns 403 to datacenter traffic, so no Senate filings are ingested yet. chamber=Senate remains a valid filter but matches nothing and returns the response header X-Coverage-Note: chamber-not-covered, so an empty result is never ambiguous. Scanning by chamber should treat that header as "not covered", not as "no trades". PLAN-CLAMPED WINDOW: this endpoint is open to every plan, but how far back you can see is clamped on disclosureDate — Free sees only trades disclosed in the last 30 days, Starter the last 366 days, Pro/Business/Enterprise unlimited history. Passing an older disclosure_date_from than your plan allows does not extend the window — the floor always wins. Filters: ticker, politician (bioguideId, exact), party (free-text, case-insensitive exact match — not a fixed enum), chamber (House|Senate — see the coverage note above), state (2-letter code), transaction_type (purchase|sale|partial_sale|exchange), min_amount (range-aware — matches AmountLow >= value, never a fabricated midpoint), transaction_date_from/to, disclosure_date_from/to. Every row always carries BOTH amountLow and amountHigh (STOCK Act discloses ranges, never exact figures) and disclosureLagDays = (disclosureDate - transactionDate) — the STOCK Act allows up to 45 days of lag, so "real-time" here means minutes-after-disclosure, not minutes-after-trade. For per-politician or per-ticker rollups use GET /v1/congress/politicians, /v1/congress/politicians/{idOrSlug}, or /v1/congress/tickers/{ticker} (all Pro+). To check whether an insider cluster-buy lines up with a congressional purchase in the same ticker, use GET /v1/signals/convergence (Pro+); for the company's own profile use GET /v1/companies/{ticker} (Free). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching."""
         params = {
             "ticker": ticker,
             "politician": politician,
@@ -1448,6 +1525,7 @@ class GeneratedAsyncCongressResource:
             "disclosure_date_to": disclosure_date_to,
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = await self._client._get(f"/v1/congress/trades", params=params)
@@ -1485,14 +1563,14 @@ class GeneratedFilingsResource:
     def get(self, accession: str) -> FilingResponse:
         """Get a single Form 4 filing by its exact SEC accession number
 
-        Returns one filing's metadata — accession number, company ticker/name, period of report, filed date, amendment type (Original/Amendment), and the count of non-superseded transactions it contains. Use this to look up a specific filing you already have the accession number for (e.g. from GET /v1/filings/recent or GET /v1/transactions); it does not return the individual transaction rows themselves — pull those via GET /v1/transactions filtered by ticker/cik and date. Returns 404 NOT_FOUND if the accession number isn't tracked. Not plan-gated. Query runs live against the database — no caching."""
+        Returns one filing's metadata — accession number, company ticker/name, period of report, filed date, acceptedAt (precise UTC SEC-acceptance instant, nullable), documentUrl, amendment type (Original/Amendment), and the count of non-superseded transactions it contains. Use this to look up a specific filing you already have the accession number for (e.g. from GET /v1/filings/recent or GET /v1/transactions); it does not return the individual transaction rows themselves — pull those via GET /v1/transactions filtered by ticker/cik and date. Returns 404 NOT_FOUND if the accession number isn't tracked. Not plan-gated. Query runs live against the database — no caching."""
         data = self._client._get(f"/v1/filings/{accession}")
         return FilingResponse._from_dict(data)
 
     def list(self, *, ticker: str | None = None, cik: str | None = None, from_: str | None = None, to: str | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[FilingResponse]:
         """List Form 4 filings with optional ticker, CIK and date filters
 
-        Returns a paginated list of Form 4 filings, newest filed first. Filter by ticker, cik, and a from/to filed-date window. Each entry carries the accession number, company ticker/name, period of report, filed date, amendment type (Original/Amendment), and the count of non-superseded transactions in that filing. Use this for a company's filing HISTORY; use GET /v1/filings/recent for a live newest-first feed (it has no page parameter), and GET /v1/transactions when you want the individual trades rather than the filings that contain them. `limit` is accepted as an alias for `per_page`. Not plan-gated."""
+        Returns a paginated list of Form 4 filings, newest filed first. Filter by ticker, cik, and a from/to filed-date window. Each entry carries the accession number, company ticker/name, period of report, filed date, acceptedAt (the precise UTC SEC-acceptance instant, null if not captured), documentUrl (the public SEC document URL), amendment type (Original/Amendment), and the count of non-superseded transactions in that filing. Use this for a company's filing HISTORY; use GET /v1/filings/recent for a live newest-first feed (it has no page parameter), and GET /v1/transactions when you want the individual trades rather than the filings that contain them. `limit` is accepted as an alias for `per_page`. Not plan-gated."""
         params = {
             "ticker": ticker,
             "cik": cik,
@@ -1509,7 +1587,7 @@ class GeneratedFilingsResource:
     def recent(self, *, ticker: str | None = None, per_page: int | None = None) -> list[FilingResponse]:
         """Get the most recently filed Form 4s, optionally filtered by ticker
 
-        Returns the most recently filed Form 4s across all companies, newest first, optionally restricted to a single ticker. Use this to monitor new insider activity as it's ingested (e.g. a live "latest filings" feed) rather than for historical or bulk queries — for date-range or filter-heavy queries use GET /v1/transactions with from/to instead. Each entry includes the accession number, company ticker/name, period of report, filed date, amendment type, and the count of non-superseded transactions in that filing. There is no page parameter — this always returns the newest per_page filings, not an arbitrary offset. Not plan-gated."""
+        Returns the most recently filed Form 4s across all companies, newest first, optionally restricted to a single ticker. Use this to monitor new insider activity as it's ingested (e.g. a live "latest filings" feed) rather than for historical or bulk queries — for date-range or filter-heavy queries use GET /v1/transactions with from/to instead. Each entry includes the accession number, company ticker/name, period of report, filed date, acceptedAt (precise UTC SEC-acceptance instant, nullable), documentUrl, amendment type, and the count of non-superseded transactions in that filing. There is no page parameter — this always returns the newest per_page filings, not an arbitrary offset. Not plan-gated."""
         params = {
             "ticker": ticker,
             "per_page": per_page,
@@ -1526,14 +1604,14 @@ class GeneratedAsyncFilingsResource:
     async def get(self, accession: str) -> FilingResponse:
         """Get a single Form 4 filing by its exact SEC accession number
 
-        Returns one filing's metadata — accession number, company ticker/name, period of report, filed date, amendment type (Original/Amendment), and the count of non-superseded transactions it contains. Use this to look up a specific filing you already have the accession number for (e.g. from GET /v1/filings/recent or GET /v1/transactions); it does not return the individual transaction rows themselves — pull those via GET /v1/transactions filtered by ticker/cik and date. Returns 404 NOT_FOUND if the accession number isn't tracked. Not plan-gated. Query runs live against the database — no caching."""
+        Returns one filing's metadata — accession number, company ticker/name, period of report, filed date, acceptedAt (precise UTC SEC-acceptance instant, nullable), documentUrl, amendment type (Original/Amendment), and the count of non-superseded transactions it contains. Use this to look up a specific filing you already have the accession number for (e.g. from GET /v1/filings/recent or GET /v1/transactions); it does not return the individual transaction rows themselves — pull those via GET /v1/transactions filtered by ticker/cik and date. Returns 404 NOT_FOUND if the accession number isn't tracked. Not plan-gated. Query runs live against the database — no caching."""
         data = await self._client._get(f"/v1/filings/{accession}")
         return FilingResponse._from_dict(data)
 
     async def list(self, *, ticker: str | None = None, cik: str | None = None, from_: str | None = None, to: str | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[FilingResponse]:
         """List Form 4 filings with optional ticker, CIK and date filters
 
-        Returns a paginated list of Form 4 filings, newest filed first. Filter by ticker, cik, and a from/to filed-date window. Each entry carries the accession number, company ticker/name, period of report, filed date, amendment type (Original/Amendment), and the count of non-superseded transactions in that filing. Use this for a company's filing HISTORY; use GET /v1/filings/recent for a live newest-first feed (it has no page parameter), and GET /v1/transactions when you want the individual trades rather than the filings that contain them. `limit` is accepted as an alias for `per_page`. Not plan-gated."""
+        Returns a paginated list of Form 4 filings, newest filed first. Filter by ticker, cik, and a from/to filed-date window. Each entry carries the accession number, company ticker/name, period of report, filed date, acceptedAt (the precise UTC SEC-acceptance instant, null if not captured), documentUrl (the public SEC document URL), amendment type (Original/Amendment), and the count of non-superseded transactions in that filing. Use this for a company's filing HISTORY; use GET /v1/filings/recent for a live newest-first feed (it has no page parameter), and GET /v1/transactions when you want the individual trades rather than the filings that contain them. `limit` is accepted as an alias for `per_page`. Not plan-gated."""
         params = {
             "ticker": ticker,
             "cik": cik,
@@ -1550,7 +1628,7 @@ class GeneratedAsyncFilingsResource:
     async def recent(self, *, ticker: str | None = None, per_page: int | None = None) -> list[FilingResponse]:
         """Get the most recently filed Form 4s, optionally filtered by ticker
 
-        Returns the most recently filed Form 4s across all companies, newest first, optionally restricted to a single ticker. Use this to monitor new insider activity as it's ingested (e.g. a live "latest filings" feed) rather than for historical or bulk queries — for date-range or filter-heavy queries use GET /v1/transactions with from/to instead. Each entry includes the accession number, company ticker/name, period of report, filed date, amendment type, and the count of non-superseded transactions in that filing. There is no page parameter — this always returns the newest per_page filings, not an arbitrary offset. Not plan-gated."""
+        Returns the most recently filed Form 4s across all companies, newest first, optionally restricted to a single ticker. Use this to monitor new insider activity as it's ingested (e.g. a live "latest filings" feed) rather than for historical or bulk queries — for date-range or filter-heavy queries use GET /v1/transactions with from/to instead. Each entry includes the accession number, company ticker/name, period of report, filed date, acceptedAt (precise UTC SEC-acceptance instant, nullable), documentUrl, amendment type, and the count of non-superseded transactions in that filing. There is no page parameter — this always returns the newest per_page filings, not an arbitrary offset. Not plan-gated."""
         params = {
             "ticker": ticker,
             "per_page": per_page,
@@ -1564,10 +1642,10 @@ class GeneratedForm144Resource:
     def __init__(self, client) -> None:
         self._client = client
 
-    def list(self, *, ticker: str | None = None, insider_name: str | None = None, from_: str | None = None, to: str | None = None, exclude_10b5: bool | None = None, page: int | None = None, per_page: int | None = None) -> list[Form144Response]:
+    def list(self, *, ticker: str | None = None, insider_name: str | None = None, from_: str | None = None, to: str | None = None, exclude_10b5: bool | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[Form144Response]:
         """List Form 144 'notice of proposed sale' filings (Business plan+)
 
-        Returns a paginated list of Form 144 notices — an insider's SEC filing declaring intent to sell restricted/control stock, filed BEFORE the actual sale (which later shows up as a Form 4 TransactionCode=S, typically ~2 days after). Use this as a leading indicator of upcoming insider selling; the isUnder10b5Plan flag on each row separates pre-scheduled 10b5-1 disposals from discretionary intent. Each row includes accession number, ticker/company, insider name/relationship, broker, shares proposed, aggregate market value, approximate sale date, exchange, and filed/notice dates. For a bulk historical pull use GET /v1/form144/export instead. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). Query runs live against the database — no caching."""
+        Returns a paginated list of Form 144 notices — an insider's SEC filing declaring intent to sell restricted/control stock, filed BEFORE the actual sale (which later shows up as a Form 4 TransactionCode=S, typically ~2 days after). Use this as a leading indicator of upcoming insider selling; the isUnder10b5Plan flag on each row separates pre-scheduled 10b5-1 disposals from discretionary intent. Each row includes accession number, ticker/company, insider name/relationship, broker, shares proposed, aggregate market value, approximate sale date, exchange, filed/notice dates, filerCik (from filerCredentials/cik — may be the insider or a filing agent), securitiesClassTitle, and documentUrl (the public SEC document URL). For a bulk historical pull use GET /v1/form144/export instead. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching."""
         params = {
             "ticker": ticker,
             "insider_name": insider_name,
@@ -1576,6 +1654,7 @@ class GeneratedForm144Resource:
             "exclude_10b5": exclude_10b5,
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = self._client._get(f"/v1/form144", params=params)
@@ -1586,10 +1665,10 @@ class GeneratedAsyncForm144Resource:
     def __init__(self, client) -> None:
         self._client = client
 
-    async def list(self, *, ticker: str | None = None, insider_name: str | None = None, from_: str | None = None, to: str | None = None, exclude_10b5: bool | None = None, page: int | None = None, per_page: int | None = None) -> list[Form144Response]:
+    async def list(self, *, ticker: str | None = None, insider_name: str | None = None, from_: str | None = None, to: str | None = None, exclude_10b5: bool | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[Form144Response]:
         """List Form 144 'notice of proposed sale' filings (Business plan+)
 
-        Returns a paginated list of Form 144 notices — an insider's SEC filing declaring intent to sell restricted/control stock, filed BEFORE the actual sale (which later shows up as a Form 4 TransactionCode=S, typically ~2 days after). Use this as a leading indicator of upcoming insider selling; the isUnder10b5Plan flag on each row separates pre-scheduled 10b5-1 disposals from discretionary intent. Each row includes accession number, ticker/company, insider name/relationship, broker, shares proposed, aggregate market value, approximate sale date, exchange, and filed/notice dates. For a bulk historical pull use GET /v1/form144/export instead. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). Query runs live against the database — no caching."""
+        Returns a paginated list of Form 144 notices — an insider's SEC filing declaring intent to sell restricted/control stock, filed BEFORE the actual sale (which later shows up as a Form 4 TransactionCode=S, typically ~2 days after). Use this as a leading indicator of upcoming insider selling; the isUnder10b5Plan flag on each row separates pre-scheduled 10b5-1 disposals from discretionary intent. Each row includes accession number, ticker/company, insider name/relationship, broker, shares proposed, aggregate market value, approximate sale date, exchange, filed/notice dates, filerCik (from filerCredentials/cik — may be the insider or a filing agent), securitiesClassTitle, and documentUrl (the public SEC document URL). For a bulk historical pull use GET /v1/form144/export instead. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching."""
         params = {
             "ticker": ticker,
             "insider_name": insider_name,
@@ -1598,6 +1677,7 @@ class GeneratedAsyncForm144Resource:
             "exclude_10b5": exclude_10b5,
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = await self._client._get(f"/v1/form144", params=params)
@@ -1608,10 +1688,10 @@ class GeneratedHoldingsResource:
     def __init__(self, client) -> None:
         self._client = client
 
-    def list(self, *, ticker: str | None = None, cusip: str | None = None, manager_cik: str | None = None, quarter: str | None = None, min_value: float | None = None, page: int | None = None, per_page: int | None = None) -> list[HoldingResponse]:
+    def list(self, *, ticker: str | None = None, cusip: str | None = None, manager_cik: str | None = None, quarter: str | None = None, min_value: float | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[HoldingResponse]:
         """List institutional holdings from Form 13F-HR (Business plan+)
 
-        Returns a paginated list of individual position rows from Form 13F-HR institutional holdings reports (quarterly disclosures by managers with $100M+ AUM), most recent report period and highest value first. Each row includes the manager name/CIK, report period, issuer name/ticker, CUSIP, security class, position value and share count, share/voting authority type, and the source filing's accession number and filed date. A single security can appear multiple times per manager when sub-managers each report it separately (e.g. Berkshire's subsidiaries). Use GET /v1/managers instead when you want one row per manager (their latest filing + total AUM) rather than position-level detail. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). Query runs live against the database — no caching; 13F data itself is inherently quarter-lagged (SEC filing deadline is 45 days after quarter end)."""
+        Returns a paginated list of individual position rows from Form 13F-HR institutional holdings reports (quarterly disclosures by managers with $100M+ AUM), most recent report period and highest value first. Each row includes the manager name/CIK, report period, issuer name/ticker, CUSIP, security class, position value and share count, share/voting authority type, and the source filing's accession number and filed date. A single security can appear multiple times per manager when sub-managers each report it separately (e.g. Berkshire's subsidiaries). Use GET /v1/managers instead when you want one row per manager (their latest filing + total AUM) rather than position-level detail. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching; 13F data itself is inherently quarter-lagged (SEC filing deadline is 45 days after quarter end)."""
         params = {
             "ticker": ticker,
             "cusip": cusip,
@@ -1620,20 +1700,22 @@ class GeneratedHoldingsResource:
             "min_value": min_value,
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = self._client._get(f"/v1/holdings", params=params)
         return [HoldingResponse._from_dict(item) for item in data]
 
-    def managers(self, *, name: str | None = None, min_aum: float | None = None, page: int | None = None, per_page: int | None = None) -> list[ManagerResponse]:
+    def managers(self, *, name: str | None = None, min_aum: float | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[ManagerResponse]:
         """List institutional managers with their latest 13F-HR (Business plan+)
 
-        Returns one row per institutional manager (13F filer), summarising their MOST RECENT 13F-HR filing — manager name/CIK, report period, total reported position value (AUM) and entry count, filed date, and accession number — ranked by AUM descending. Use this for manager-level discovery ("who are the biggest 13F filers?", "rank Apple's institutional holders") before drilling into position detail via GET /v1/holdings?manager_cik=. Amended (IsAmendment=true) filings are excluded from the 'latest' pick. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). Query runs live against the database — no caching; 13F data is inherently quarter-lagged (SEC deadline is 45 days after quarter end)."""
+        Returns one row per institutional manager (13F filer), summarising their MOST RECENT 13F-HR filing — manager name/CIK, report period, total reported position value (AUM) and entry count, filed date, and accession number — ranked by AUM descending. Use this for manager-level discovery ("who are the biggest 13F filers?", "rank Apple's institutional holders") before drilling into position detail via GET /v1/holdings?manager_cik=. Amended (IsAmendment=true) filings are excluded from the 'latest' pick. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching; 13F data is inherently quarter-lagged (SEC deadline is 45 days after quarter end)."""
         params = {
             "name": name,
             "min_aum": min_aum,
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = self._client._get(f"/v1/managers", params=params)
@@ -1644,10 +1726,10 @@ class GeneratedAsyncHoldingsResource:
     def __init__(self, client) -> None:
         self._client = client
 
-    async def list(self, *, ticker: str | None = None, cusip: str | None = None, manager_cik: str | None = None, quarter: str | None = None, min_value: float | None = None, page: int | None = None, per_page: int | None = None) -> list[HoldingResponse]:
+    async def list(self, *, ticker: str | None = None, cusip: str | None = None, manager_cik: str | None = None, quarter: str | None = None, min_value: float | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[HoldingResponse]:
         """List institutional holdings from Form 13F-HR (Business plan+)
 
-        Returns a paginated list of individual position rows from Form 13F-HR institutional holdings reports (quarterly disclosures by managers with $100M+ AUM), most recent report period and highest value first. Each row includes the manager name/CIK, report period, issuer name/ticker, CUSIP, security class, position value and share count, share/voting authority type, and the source filing's accession number and filed date. A single security can appear multiple times per manager when sub-managers each report it separately (e.g. Berkshire's subsidiaries). Use GET /v1/managers instead when you want one row per manager (their latest filing + total AUM) rather than position-level detail. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). Query runs live against the database — no caching; 13F data itself is inherently quarter-lagged (SEC filing deadline is 45 days after quarter end)."""
+        Returns a paginated list of individual position rows from Form 13F-HR institutional holdings reports (quarterly disclosures by managers with $100M+ AUM), most recent report period and highest value first. Each row includes the manager name/CIK, report period, issuer name/ticker, CUSIP, security class, position value and share count, share/voting authority type, and the source filing's accession number and filed date. A single security can appear multiple times per manager when sub-managers each report it separately (e.g. Berkshire's subsidiaries). Use GET /v1/managers instead when you want one row per manager (their latest filing + total AUM) rather than position-level detail. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching; 13F data itself is inherently quarter-lagged (SEC filing deadline is 45 days after quarter end)."""
         params = {
             "ticker": ticker,
             "cusip": cusip,
@@ -1656,20 +1738,22 @@ class GeneratedAsyncHoldingsResource:
             "min_value": min_value,
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = await self._client._get(f"/v1/holdings", params=params)
         return [HoldingResponse._from_dict(item) for item in data]
 
-    async def managers(self, *, name: str | None = None, min_aum: float | None = None, page: int | None = None, per_page: int | None = None) -> list[ManagerResponse]:
+    async def managers(self, *, name: str | None = None, min_aum: float | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[ManagerResponse]:
         """List institutional managers with their latest 13F-HR (Business plan+)
 
-        Returns one row per institutional manager (13F filer), summarising their MOST RECENT 13F-HR filing — manager name/CIK, report period, total reported position value (AUM) and entry count, filed date, and accession number — ranked by AUM descending. Use this for manager-level discovery ("who are the biggest 13F filers?", "rank Apple's institutional holders") before drilling into position detail via GET /v1/holdings?manager_cik=. Amended (IsAmendment=true) filings are excluded from the 'latest' pick. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). Query runs live against the database — no caching; 13F data is inherently quarter-lagged (SEC deadline is 45 days after quarter end)."""
+        Returns one row per institutional manager (13F filer), summarising their MOST RECENT 13F-HR filing — manager name/CIK, report period, total reported position value (AUM) and entry count, filed date, and accession number — ranked by AUM descending. Use this for manager-level discovery ("who are the biggest 13F filers?", "rank Apple's institutional holders") before drilling into position detail via GET /v1/holdings?manager_cik=. Amended (IsAmendment=true) filings are excluded from the 'latest' pick. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching; 13F data is inherently quarter-lagged (SEC deadline is 45 days after quarter end)."""
         params = {
             "name": name,
             "min_aum": min_aum,
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = await self._client._get(f"/v1/managers", params=params)
@@ -1680,7 +1764,7 @@ class GeneratedInsidersResource:
     def __init__(self, client) -> None:
         self._client = client
 
-    def directory(self, *, letter: str | None = None, page: int | None = None, per_page: int | None = None) -> InsiderDirectoryResponse:
+    def directory(self, *, letter: str | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> InsiderDirectoryResponse:
         """Browse insiders alphabetically by surname
 
         Returns the A-Z rail with a count per letter, plus one page of insiders under the
@@ -1692,7 +1776,8 @@ is order by surname. Casing in the source is inconsistent and is not normalised 
 This lists only insiders with at least 3 non-superseded transactions, capped at the
 5,000 most active — the same set as the insiders sitemap shard, so the two cannot
 drift. To find someone outside that set, use GET /v1/insiders?name= which searches
-every filer. Rebuilt daily; `refreshedAt` reports when. Not plan-gated.
+every filer. Rebuilt daily; `refreshedAt` reports when. `limit` is accepted as an alias for
+`per_page`. Not plan-gated.
 
 One row per FILER GROUP. A fund group files a single Form 4 listing several
 reporting owners — the fund, its GP, its management company — and each is a real
@@ -1705,6 +1790,7 @@ GET /v1/insiders?name=."""
             "letter": letter,
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = self._client._get(f"/v1/insiders/directory", params=params)
@@ -1732,14 +1818,15 @@ parameter combination."""
         data = self._client._get(f"/v1/insiders/leaderboard", params=params)
         return InsiderLeaderboardResponse._from_dict(data)
 
-    def list(self, *, name: str | None = None, page: int | None = None, per_page: int | None = None) -> list[InsiderResponse]:
+    def list(self, *, name: str | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[InsiderResponse]:
         """Search insiders (officers, directors, 10% owners) by name
 
-        Searches insiders by name and returns a paginated list of matches with each insider's CIK, title, director/officer/10%-owner flags, and total filing count. Use this to resolve a person's name to their CIK before fetching their transaction history, career summary, or scorecard — the CIK returned here feeds directly into GET /v1/insiders/{cik}/transactions, /summary, and /scorecard. Omitting the name filter returns insiders in alphabetical order rather than performing a search. Not plan-gated — available on the Free tier."""
+        Searches insiders by name and returns a paginated list of matches with each insider's CIK, title, director/officer/10%-owner flags, and total filing count. Use this to resolve a person's name to their CIK before fetching their transaction history, career summary, or scorecard — the CIK returned here feeds directly into GET /v1/insiders/{cik}/transactions, /summary, and /scorecard. Omitting the name filter returns insiders in alphabetical order rather than performing a search. `limit` is accepted as an alias for `per_page`. Not plan-gated — available on the Free tier."""
         params = {
             "name": name,
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = self._client._get(f"/v1/insiders", params=params)
@@ -1783,7 +1870,7 @@ class GeneratedAsyncInsidersResource:
     def __init__(self, client) -> None:
         self._client = client
 
-    async def directory(self, *, letter: str | None = None, page: int | None = None, per_page: int | None = None) -> InsiderDirectoryResponse:
+    async def directory(self, *, letter: str | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> InsiderDirectoryResponse:
         """Browse insiders alphabetically by surname
 
         Returns the A-Z rail with a count per letter, plus one page of insiders under the
@@ -1795,7 +1882,8 @@ is order by surname. Casing in the source is inconsistent and is not normalised 
 This lists only insiders with at least 3 non-superseded transactions, capped at the
 5,000 most active — the same set as the insiders sitemap shard, so the two cannot
 drift. To find someone outside that set, use GET /v1/insiders?name= which searches
-every filer. Rebuilt daily; `refreshedAt` reports when. Not plan-gated.
+every filer. Rebuilt daily; `refreshedAt` reports when. `limit` is accepted as an alias for
+`per_page`. Not plan-gated.
 
 One row per FILER GROUP. A fund group files a single Form 4 listing several
 reporting owners — the fund, its GP, its management company — and each is a real
@@ -1808,6 +1896,7 @@ GET /v1/insiders?name=."""
             "letter": letter,
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = await self._client._get(f"/v1/insiders/directory", params=params)
@@ -1835,14 +1924,15 @@ parameter combination."""
         data = await self._client._get(f"/v1/insiders/leaderboard", params=params)
         return InsiderLeaderboardResponse._from_dict(data)
 
-    async def list(self, *, name: str | None = None, page: int | None = None, per_page: int | None = None) -> list[InsiderResponse]:
+    async def list(self, *, name: str | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[InsiderResponse]:
         """Search insiders (officers, directors, 10% owners) by name
 
-        Searches insiders by name and returns a paginated list of matches with each insider's CIK, title, director/officer/10%-owner flags, and total filing count. Use this to resolve a person's name to their CIK before fetching their transaction history, career summary, or scorecard — the CIK returned here feeds directly into GET /v1/insiders/{cik}/transactions, /summary, and /scorecard. Omitting the name filter returns insiders in alphabetical order rather than performing a search. Not plan-gated — available on the Free tier."""
+        Searches insiders by name and returns a paginated list of matches with each insider's CIK, title, director/officer/10%-owner flags, and total filing count. Use this to resolve a person's name to their CIK before fetching their transaction history, career summary, or scorecard — the CIK returned here feeds directly into GET /v1/insiders/{cik}/transactions, /summary, and /scorecard. Omitting the name filter returns insiders in alphabetical order rather than performing a search. `limit` is accepted as an alias for `per_page`. Not plan-gated — available on the Free tier."""
         params = {
             "name": name,
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = await self._client._get(f"/v1/insiders", params=params)
@@ -1886,16 +1976,17 @@ class GeneratedSignalsResource:
     def __init__(self, client) -> None:
         self._client = client
 
-    def convergence(self, *, ticker: str | None = None, window_days: int | None = None, lookback_days: int | None = None, page: int | None = None, per_page: int | None = None) -> list[ConvergenceEntryDto]:
+    def convergence(self, *, ticker: str | None = None, window_days: int | None = None, lookback_days: int | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[ConvergenceEntryDto]:
         """Insider cluster-buy x congressional-purchase convergence (Pro plan+)
 
-        Returns the tickers where an insider cluster-buy (InsiderSignal.IsClusterBuy) and at least one non-superseded congressional PURCHASE happened within window_days of EACH OTHER, restricted to convergences where the MORE RECENT of the pair's two dates is within a trailing lookback_days (so this surfaces CURRENT convergences, not ancient history). DEFINITION: for each result, insider.signalDate is the SignalDate of the qualifying cluster-buy signal with the most recent date (insider.insiderCount is that same signal's count — never summed or maxed across multiple signals), and congress is every non-superseded congressional purchase that paired with at least one qualifying cluster-buy (not every purchase in the window — only the ones that actually paired). firstSeen/lastSeen are the earliest/most recent dates among all qualifying insider and congress dates for that ticker. STRENGTH is documented arithmetic, NOT a black-box or predictive/ML score: strength = (distinct congressional purchasers among the qualifying legs) x (the representative signal's insiderCount) — a plain multiplication of two observed counts, nothing more. HONESTY: every congress leg always carries both amountLow and amountHigh (STOCK Act discloses ranges, never exact figures — never combined into a fabricated midpoint) and disclosureLagDays = (disclosureDate - transactionDate); congressional trades are disclosed up to 45 days after the actual trade under the STOCK Act, so this endpoint is detection/monitoring of what insiders AND members of Congress have DISCLOSED buying, not a claim of predictive edge, alpha, or win rate — no performance numbers are computed or implied anywhere in this response. window_days and lookback_days are both caller-overridable with clamps (see each parameter's own description for the exact bounds). Requires Pro plan or higher (402 PLAN_REQUIRED on Free/Starter). Query runs live against the database — no caching."""
+        Returns the tickers where an insider cluster-buy (InsiderSignal.IsClusterBuy) and at least one non-superseded congressional PURCHASE happened within window_days of EACH OTHER, restricted to convergences where the MORE RECENT of the pair's two dates is within a trailing lookback_days (so this surfaces CURRENT convergences, not ancient history). DEFINITION: for each result, insider.signalDate is the SignalDate of the qualifying cluster-buy signal with the most recent date (insider.insiderCount is that same signal's count — never summed or maxed across multiple signals), and congress is every non-superseded congressional purchase that paired with at least one qualifying cluster-buy (not every purchase in the window — only the ones that actually paired). firstSeen/lastSeen are the earliest/most recent dates among all qualifying insider and congress dates for that ticker. STRENGTH is documented arithmetic, NOT a black-box or predictive/ML score: strength = (distinct congressional purchasers among the qualifying legs) x (the representative signal's insiderCount) — a plain multiplication of two observed counts, nothing more. HONESTY: every congress leg always carries both amountLow and amountHigh (STOCK Act discloses ranges, never exact figures — never combined into a fabricated midpoint) and disclosureLagDays = (disclosureDate - transactionDate); congressional trades are disclosed up to 45 days after the actual trade under the STOCK Act, so this endpoint is detection/monitoring of what insiders AND members of Congress have DISCLOSED buying, not a claim of predictive edge, alpha, or win rate — no performance numbers are computed or implied anywhere in this response. window_days and lookback_days are both caller-overridable with clamps (see each parameter's own description for the exact bounds). Requires Pro plan or higher (402 PLAN_REQUIRED on Free/Starter). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching."""
         params = {
             "ticker": ticker,
             "window_days": window_days,
             "lookback_days": lookback_days,
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = self._client._get(f"/v1/signals/convergence", params=params)
@@ -1928,16 +2019,17 @@ class GeneratedAsyncSignalsResource:
     def __init__(self, client) -> None:
         self._client = client
 
-    async def convergence(self, *, ticker: str | None = None, window_days: int | None = None, lookback_days: int | None = None, page: int | None = None, per_page: int | None = None) -> list[ConvergenceEntryDto]:
+    async def convergence(self, *, ticker: str | None = None, window_days: int | None = None, lookback_days: int | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[ConvergenceEntryDto]:
         """Insider cluster-buy x congressional-purchase convergence (Pro plan+)
 
-        Returns the tickers where an insider cluster-buy (InsiderSignal.IsClusterBuy) and at least one non-superseded congressional PURCHASE happened within window_days of EACH OTHER, restricted to convergences where the MORE RECENT of the pair's two dates is within a trailing lookback_days (so this surfaces CURRENT convergences, not ancient history). DEFINITION: for each result, insider.signalDate is the SignalDate of the qualifying cluster-buy signal with the most recent date (insider.insiderCount is that same signal's count — never summed or maxed across multiple signals), and congress is every non-superseded congressional purchase that paired with at least one qualifying cluster-buy (not every purchase in the window — only the ones that actually paired). firstSeen/lastSeen are the earliest/most recent dates among all qualifying insider and congress dates for that ticker. STRENGTH is documented arithmetic, NOT a black-box or predictive/ML score: strength = (distinct congressional purchasers among the qualifying legs) x (the representative signal's insiderCount) — a plain multiplication of two observed counts, nothing more. HONESTY: every congress leg always carries both amountLow and amountHigh (STOCK Act discloses ranges, never exact figures — never combined into a fabricated midpoint) and disclosureLagDays = (disclosureDate - transactionDate); congressional trades are disclosed up to 45 days after the actual trade under the STOCK Act, so this endpoint is detection/monitoring of what insiders AND members of Congress have DISCLOSED buying, not a claim of predictive edge, alpha, or win rate — no performance numbers are computed or implied anywhere in this response. window_days and lookback_days are both caller-overridable with clamps (see each parameter's own description for the exact bounds). Requires Pro plan or higher (402 PLAN_REQUIRED on Free/Starter). Query runs live against the database — no caching."""
+        Returns the tickers where an insider cluster-buy (InsiderSignal.IsClusterBuy) and at least one non-superseded congressional PURCHASE happened within window_days of EACH OTHER, restricted to convergences where the MORE RECENT of the pair's two dates is within a trailing lookback_days (so this surfaces CURRENT convergences, not ancient history). DEFINITION: for each result, insider.signalDate is the SignalDate of the qualifying cluster-buy signal with the most recent date (insider.insiderCount is that same signal's count — never summed or maxed across multiple signals), and congress is every non-superseded congressional purchase that paired with at least one qualifying cluster-buy (not every purchase in the window — only the ones that actually paired). firstSeen/lastSeen are the earliest/most recent dates among all qualifying insider and congress dates for that ticker. STRENGTH is documented arithmetic, NOT a black-box or predictive/ML score: strength = (distinct congressional purchasers among the qualifying legs) x (the representative signal's insiderCount) — a plain multiplication of two observed counts, nothing more. HONESTY: every congress leg always carries both amountLow and amountHigh (STOCK Act discloses ranges, never exact figures — never combined into a fabricated midpoint) and disclosureLagDays = (disclosureDate - transactionDate); congressional trades are disclosed up to 45 days after the actual trade under the STOCK Act, so this endpoint is detection/monitoring of what insiders AND members of Congress have DISCLOSED buying, not a claim of predictive edge, alpha, or win rate — no performance numbers are computed or implied anywhere in this response. window_days and lookback_days are both caller-overridable with clamps (see each parameter's own description for the exact bounds). Requires Pro plan or higher (402 PLAN_REQUIRED on Free/Starter). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching."""
         params = {
             "ticker": ticker,
             "window_days": window_days,
             "lookback_days": lookback_days,
             "page": page,
             "per_page": per_page,
+            "limit": limit,
         }
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = await self._client._get(f"/v1/signals/convergence", params=params)
