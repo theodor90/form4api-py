@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Added `client.search(q, limit=None)` (sync and async) for the new
+  `GET /v1/search` endpoint — a combined company + insider lookup by name or
+  ticker, returning typed `SearchResults` (`companies: list[SearchCompany]`,
+  `insiders: list[SearchInsider]`). `q` must be 2-64 characters; the API's
+  `QUERY_TOO_SHORT`/`QUERY_TOO_LONG` 400s surface as `Form4ApiError`.
+
 ## 0.8.0 — 2026-09-24
 
 - **Fixed:** `transactions.list()`, `transactions.paginate()` and

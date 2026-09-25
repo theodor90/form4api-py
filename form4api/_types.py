@@ -112,6 +112,49 @@ class Company:
 
 
 @dataclass
+class SearchCompany:
+    ticker: str
+    name: str
+    cik: str
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "SearchCompany":
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class SearchInsider:
+    cik: str
+    name: str
+    title: str | None
+    # A ticker associated with the insider (may be None).
+    ticker: str | None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "SearchInsider":
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class SearchResults:
+    companies: list[SearchCompany]
+    insiders: list[SearchInsider]
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "SearchResults":
+        """Build from the `/v1/search` payload, hydrating both arrays into
+        their own dataclasses rather than leaving them as raw dicts (see
+        Transaction._from_dict for why filtering unknown keys matters here
+        too — a field the backend adds later must not crash an older SDK)."""
+        return cls(
+            companies=[SearchCompany._from_dict(c) for c in (data.get("companies") or [])],
+            insiders=[SearchInsider._from_dict(i) for i in (data.get("insiders") or [])],
+        )
+
+
+@dataclass
 class InsiderSignal:
     ticker: str | None
     company_name: str
