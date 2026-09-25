@@ -9,6 +9,7 @@ from typing import Any, TypeVar
 import httpx
 
 from form4api._errors import AuthError, Form4ApiError, NotFoundError, PlanError, RateLimitError
+from form4api._types import SearchResults
 
 # Sent as the User-Agent so the backend can attribute traffic to the Python SDK
 # channel (the admin dashboard buckets by client). Read from installed package
@@ -104,6 +105,22 @@ class Form4ApiClient:
 
     def close(self) -> None:
         self._http.close()
+
+    def search(self, q: str, limit: int | None = None) -> SearchResults:
+        """Search companies and insiders by name or ticker in one call.
+
+        ``q`` must be 2-64 characters, or the API raises `Form4ApiError`
+        (HTTP 400) with `error_code` `QUERY_TOO_SHORT` or `QUERY_TOO_LONG`.
+        Insider matching is whitespace-tokenised, so `"tim cook"` matches an
+        insider named `"Cook Timothy D"`. `limit` caps the number of results
+        per array (1-20, API default 8) and defaults to the API's own default
+        when omitted. Free tier, no plan gate.
+        """
+        params: dict[str, str] = {"q": q}
+        if limit is not None:
+            params["limit"] = str(limit)
+        data = self._get("/v1/search", params)
+        return SearchResults._from_dict(data)
 
     def _request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         url = self._base_url + path
@@ -223,6 +240,14 @@ class AsyncForm4ApiClient:
 
     async def close(self) -> None:
         await self._http.aclose()
+
+    async def search(self, q: str, limit: int | None = None) -> SearchResults:
+        """Async twin of `Form4ApiClient.search`. See there for parameter details."""
+        params: dict[str, str] = {"q": q}
+        if limit is not None:
+            params["limit"] = str(limit)
+        data = await self._get("/v1/search", params)
+        return SearchResults._from_dict(data)
 
     async def _request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
         url = self._base_url + path

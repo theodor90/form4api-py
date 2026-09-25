@@ -62,6 +62,7 @@ asyncio.run(main())
 
 | Resource | Methods |
 |---|---|
+| `client.search(q, limit=None)` | Combined company + insider lookup — not namespaced under a resource |
 | `client.transactions` | `.list(**params)`, `.paginate(**params)` |
 | `client.insiders` | `.search(name, **params)`, `.get(cik)`, `.list(**params)`, `.directory(**params)`, `.transactions(cik, **params)`, `.summary(cik)` *(Pro)*, `.scorecard(cik)` *(Pro)*, `.leaderboard(**params)` *(Business)* |
 | `client.companies` | `.get(ticker)`, `.insiders(ticker)`, `.list(**params)` |
@@ -171,6 +172,27 @@ client.transactions.list(min_shares=10_000, max_shares=100_000)
 | `sic_description` | `str \| None` | SEC SIC industry description |
 | `state_of_incorporation` | `str \| None` | Two-letter state code |
 | `website` | `str \| None` | Company website as filed with SEC |
+
+### Search
+
+`client.search(q, limit=None)` looks up companies and insiders by name or
+ticker in a single call — useful for a combined search box where you don't
+know in advance whether the user typed a ticker or a person's name. `q` must
+be 2-64 characters; outside that range the API returns HTTP 400 and the SDK
+raises `Form4ApiError` with `error_code` `"QUERY_TOO_SHORT"` or
+`"QUERY_TOO_LONG"`. Insider matching is whitespace-tokenised, so `"tim cook"`
+matches an insider named `"Cook Timothy D"`. `limit` caps the number of
+results per array (1-20, API default 8).
+
+```python
+result = client.search("tim cook")
+for c in result.companies:
+    print(c.ticker, c.name, c.cik)
+for i in result.insiders:
+    # i.ticker is a ticker associated with the insider and may be None —
+    # its exact meaning is still settling on the backend.
+    print(i.cik, i.name, i.title, i.ticker)
+```
 
 ### Pagination
 

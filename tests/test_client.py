@@ -14,8 +14,12 @@ from form4api import (
     Insider,
     Company,
     InsiderSignal,
+    SearchCompany,
+    SearchInsider,
+    SearchResults,
     verify_webhook,
 )
+from form4api._client import AsyncForm4ApiClient
 
 BASE = "https://api.form4api.com"
 
@@ -410,6 +414,129 @@ def test_signals_list_returns_typed_objects(client):
     assert isinstance(results[0], InsiderSignal)
     assert results[0].is_cluster_buy is True
     assert results[0].buy_sell_ratio == 2.5
+
+
+# ── search ───────────────────────────────────────────────────────────────────
+
+SEARCH_BODY = {
+    "companies": [{"ticker": "AAPL", "name": "Apple Inc.", "cik": "0000320193"}],
+    "insiders": [
+        {
+            "cik": "0001214156",
+            "name": "Cook Timothy D",
+            "title": "Chief Executive Officer",
+            "ticker": "AAPL",
+        }
+    ],
+}
+
+
+@respx.mock
+def test_search_returns_typed_companies_and_insiders(client):
+    respx.get(f"{BASE}/v1/search").mock(return_value=httpx.Response(200, json=SEARCH_BODY))
+    result = client.search("tim cook")
+    assert isinstance(result, SearchResults)
+    assert len(result.companies) == 1
+    assert isinstance(result.companies[0], SearchCompany)
+    assert result.companies[0].ticker == "AAPL"
+    assert result.companies[0].cik == "0000320193"
+    assert len(result.insiders) == 1
+    assert isinstance(result.insiders[0], SearchInsider)
+    assert result.insiders[0].name == "Cook Timothy D"
+    assert result.insiders[0].title == "Chief Executive Officer"
+    assert result.insiders[0].ticker == "AAPL"
+
+
+@respx.mock
+def test_search_sends_q_and_omits_limit_when_not_given(client):
+    route = respx.get(f"{BASE}/v1/search").mock(return_value=httpx.Response(200, json=SEARCH_BODY))
+    client.search("aapl")
+    qs = dict(route.calls.last.request.url.params)
+    assert qs["q"] == "aapl"
+    assert "limit" not in qs
+
+
+@respx.mock
+def test_search_sends_limit_when_given(client):
+    route = respx.get(f"{BASE}/v1/search").mock(return_value=httpx.Response(200, json=SEARCH_BODY))
+    client.search("aapl", limit=3)
+    qs = dict(route.calls.last.request.url.params)
+    assert qs["limit"] == "3"
+
+
+@respx.mock
+def test_search_tolerates_null_insider_title_and_ticker(client):
+    body = {
+        "companies": [],
+        "insiders": [{"cik": "0001", "name": "Someone Else", "title": None, "ticker": None}],
+    }
+    respx.get(f"{BASE}/v1/search").mock(return_value=httpx.Response(200, json=body))
+    result = client.search("someone")
+    assert result.insiders[0].title is None
+    assert result.insiders[0].ticker is None
+
+
+@respx.mock
+def test_search_400_query_too_short_raises_form4_api_error(client):
+    respx.get(f"{BASE}/v1/search").mock(
+        return_value=httpx.Response(
+            400,
+            json={"error": {"code": "QUERY_TOO_SHORT", "message": "q must be at least 2 characters"}},
+        )
+    )
+    with pytest.raises(Form4ApiError) as exc:
+        client.search("a")
+    assert exc.value.status_code == 400
+    assert exc.value.error_code == "QUERY_TOO_SHORT"
+
+
+@respx.mock
+def test_search_400_query_too_long_raises_form4_api_error(client):
+    respx.get(f"{BASE}/v1/search").mock(
+        return_value=httpx.Response(
+            400,
+            json={"error": {"code": "QUERY_TOO_LONG", "message": "q must be at most 64 characters"}},
+        )
+    )
+    with pytest.raises(Form4ApiError) as exc:
+        client.search("a" * 65)
+    assert exc.value.status_code == 400
+    assert exc.value.error_code == "QUERY_TOO_LONG"
+
+
+@respx.mock
+def test_search_works_on_the_async_client():
+    """The async twin, exercised directly rather than assumed from the sync
+    pass — see test_generated.py's history of the async client silently
+    breaking every hand-written resource while only sync tests existed."""
+    import asyncio
+
+    respx.get(f"{BASE}/v1/search").mock(return_value=httpx.Response(200, json=SEARCH_BODY))
+
+    async def go():
+        async with AsyncForm4ApiClient("test-key", max_retries=0) as c:
+            return await c.search("tim cook", limit=5)
+
+    result = asyncio.run(go())
+    assert isinstance(result, SearchResults)
+    assert result.companies[0].name == "Apple Inc."
+    assert result.insiders[0].cik == "0001214156"
+
+
+@respx.mock
+def test_search_async_sends_limit_param():
+    import asyncio
+
+    route = respx.get(f"{BASE}/v1/search").mock(return_value=httpx.Response(200, json=SEARCH_BODY))
+
+    async def go():
+        async with AsyncForm4ApiClient("test-key", max_retries=0) as c:
+            await c.search("aapl", limit=5)
+
+    asyncio.run(go())
+    qs = dict(route.calls.last.request.url.params)
+    assert qs["q"] == "aapl"
+    assert qs["limit"] == "5"
 
 
 # ── error handling ────────────────────────────────────────────────────────────

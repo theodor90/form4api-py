@@ -76,6 +76,14 @@ HANDLED_BY_HANDWRITTEN = {
     "GetCompany",             # companies.get()
     "GetCompanyInsiders",     # companies.insiders()
     "GetSignals",             # signals.list()
+    "Search",                 # client.search() — a top-level client method, not
+                               # a resource, since it returns both companies and
+                               # insiders in one payload. Currently the "Search"
+                               # tag has no TAG_TO_RESOURCE entry either, so this
+                               # is belt-and-suspenders: without it, a future
+                               # TAG_TO_RESOURCE["Search"] addition would silently
+                               # generate `self.search = GeneratedSearchResource(...)`
+                               # and shadow the hand-written method below.
 }
 
 # Explicit rather than derived, for the same reason as the JS generator: tags
