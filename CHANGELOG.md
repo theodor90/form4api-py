@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added `form4api.__version__` (read from the installed package metadata, so it
+  always equals the pyproject version).
+
 ## 0.9.0 — 2026-10-05
 
 - **Congress date quality (backend insiderapi #330/#331).** `CongressTradeDto`

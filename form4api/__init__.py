@@ -1,4 +1,7 @@
 from form4api._client import AsyncForm4ApiClient, Form4ApiClient
+# Single source of truth is pyproject.toml: _client reads the installed package
+# metadata, so this cannot drift from the published version.
+from form4api._client import _SDK_VERSION as __version__
 from form4api._errors import (
     AuthError,
     Form4ApiError,
@@ -24,6 +27,7 @@ from form4api._types import (
 from form4api._webhook_utils import verify_webhook
 
 __all__ = [
+    "__version__",
     "Form4ApiClient",
     "AsyncForm4ApiClient",
     "Form4ApiError",

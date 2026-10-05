@@ -16,6 +16,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      # Gate: a failing test stops the job before the publish step runs.
+      - name: Install with the dev extra
+        run: python -m pip install -e ".[dev]"
+      - name: Tests
+        run: python -m pytest
       - run: pip install build
       - run: python -m build
       - uses: pypa/gh-action-pypi-publish@release/v1
