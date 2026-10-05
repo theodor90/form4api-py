@@ -39,11 +39,11 @@ class InsidersResource(GeneratedInsidersResource):
         per_page: int = 20,
     ) -> list[Insider]:
         data = self._client._get("/v1/insiders", _search_params(name, page, per_page))
-        return [Insider(**item) for item in data]
+        return [Insider._from_dict(item) for item in data]
 
     def get(self, cik: str) -> Insider:
         data = self._client._get(f"/v1/insiders/{cik}")
-        return Insider(**data)
+        return Insider._from_dict(data)
 
     def transactions(
         self,
@@ -67,11 +67,11 @@ class AsyncInsidersResource(GeneratedAsyncInsidersResource):
 
     async def search(self, name: str, *, page: int = 1, per_page: int = 20) -> list[Insider]:
         data = await self._client._get("/v1/insiders", _search_params(name, page, per_page))
-        return [Insider(**item) for item in data]
+        return [Insider._from_dict(item) for item in data]
 
     async def get(self, cik: str) -> Insider:
         data = await self._client._get(f"/v1/insiders/{cik}")
-        return Insider(**data)
+        return Insider._from_dict(data)
 
     async def transactions(
         self,

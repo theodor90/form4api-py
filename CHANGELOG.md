@@ -4,6 +4,10 @@
 
 - Added `form4api.__version__` (read from the installed package metadata, so it
   always equals the pyproject version).
+- Responses with fields added by newer API versions no longer raise
+  `TypeError` in companies/insiders/signals/webhooks methods (sync and async).
+  Unknown keys are now ignored, as the transactions, search and generated
+  models already did.
 
 ## 0.9.0 — 2026-10-05
 

@@ -50,7 +50,7 @@ class SignalsResource(GeneratedSignalsResource):
     ) -> list[InsiderSignal]:
         params = _list_params(ticker, cluster_buy, cluster_sell, page, per_page)
         data = self._client._get("/v1/signals", params)
-        return [InsiderSignal(**item) for item in data]
+        return [InsiderSignal._from_dict(item) for item in data]
 
     def paginate(
         self,
@@ -117,7 +117,7 @@ class AsyncSignalsResource(GeneratedAsyncSignalsResource):
     ) -> list[InsiderSignal]:
         params = _list_params(ticker, cluster_buy, cluster_sell, page, per_page)
         data = await self._client._get("/v1/signals", params)
-        return [InsiderSignal(**item) for item in data]
+        return [InsiderSignal._from_dict(item) for item in data]
 
     async def paginate(
         self,
