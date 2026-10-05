@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install with the dev extra
+        run: python -m pip install -e ".[dev]"
+      - name: Tests
+        run: python -m pytest
+      # Fetches the public OpenAPI spec; no secrets involved.
+      - name: Codegen check
+        run: python codegen/check.py
+      # Build, static checks, install the wheel in a fresh venv, smoke test it.
+      # The live contract stage needs FORM4API_TEST_KEY and runs locally before a release.
+      - name: Release check (offline)
+        run: python scripts/release_check.py --offline

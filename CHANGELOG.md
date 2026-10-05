@@ -1,6 +1,28 @@
 # Changelog
 
+## Before publishing
+
+Run the release check with a real API key and get it green BEFORE `twine upload`:
+
+```
+py -m pip install -e ".[dev]"          # once: build, twine, check-wheel-contents, validator
+$env:FORM4API_TEST_KEY = "<a Business-plan key>"   # PowerShell; never paste it into a file
+py scripts/release_check.py
+```
+
+It builds the sdist and wheel into a temp directory, runs `twine check --strict`
+and `check-wheel-contents`, installs the wheel into a fresh venv, smoke-tests the
+installed package from outside the repo, and compares live API responses with
+the live OpenAPI spec (`contract/live-calls.json`). It never uploads anything.
+`--offline` skips the live stage (CI uses it); `--keep` keeps the temp dirs.
+Upload the files from the `dist/` you built with `py -m build`, only after a
+passing run. Bump `pyproject.toml` and add the top entry below first: stage 1
+fails if they disagree.
+
 ## Unreleased
+
+- Added `form4api.__version__` (read from the installed package metadata, so it
+  always equals the pyproject version).
 
 ## 0.9.0 — 2026-10-05
 

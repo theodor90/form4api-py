@@ -1,0 +1,11 @@
+[
+  { "id": "stats", "method": "GET /v1/stats", "params": {} },
+  { "id": "transactions-aapl", "method": "GET /v1/transactions", "params": { "ticker": "AAPL", "limit": 5 } },
+  { "id": "filings-aapl", "method": "GET /v1/filings", "params": { "ticker": "AAPL", "limit": 5 } },
+  { "id": "company-aapl", "method": "GET /v1/companies/{ticker}", "params": { "ticker": "AAPL" } },
+  { "id": "company-insiders-aapl", "method": "GET /v1/companies/{ticker}/insiders", "params": { "ticker": "AAPL" } },
+  { "id": "insider-search", "method": "GET /v1/insiders", "params": { "name": "cook" } },
+  { "id": "signals", "method": "GET /v1/signals", "params": { "limit": 5 } },
+  { "id": "congress-sony", "method": "GET /v1/congress/trades", "params": { "ticker": "SONY" } },
+  { "id": "search-apple", "method": "GET /v1/search", "params": { "q": "apple" } }
+]

@@ -1,0 +1,154 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "trimmed live spec (congress trades only)",
+    "version": "v1"
+  },
+  "paths": {
+    "/v1/congress/trades": {
+      "get": {
+        "operationId": "ListCongressTrades",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CongressTradeDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CongressTradeDto": {
+        "required": [
+          "politician",
+          "ticker",
+          "assetName",
+          "assetType",
+          "ownerType",
+          "transactionType",
+          "amountLow",
+          "amountHigh",
+          "transactionDate",
+          "disclosureDate",
+          "disclosureLagDays",
+          "dateQuality"
+        ],
+        "type": "object",
+        "properties": {
+          "politician": {
+            "$ref": "#/components/schemas/CongressPoliticianRefDto"
+          },
+          "ticker": {
+            "type": "string",
+            "nullable": true
+          },
+          "assetName": {
+            "type": "string"
+          },
+          "assetType": {
+            "enum": [
+              "Stock",
+              "Bond",
+              "Option",
+              "Fund",
+              "Crypto",
+              "Other",
+              "Unknown"
+            ],
+            "type": "string"
+          },
+          "ownerType": {
+            "enum": [
+              "Self",
+              "Spouse",
+              "Joint",
+              "DependentChild",
+              "Unknown"
+            ],
+            "type": "string"
+          },
+          "transactionType": {
+            "enum": [
+              "Purchase",
+              "Sale",
+              "PartialSale",
+              "Exchange",
+              "Unknown"
+            ],
+            "type": "string"
+          },
+          "amountLow": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "amountHigh": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "transactionDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "disclosureDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "disclosureLagDays": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "dateQuality": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "CongressPoliticianRefDto": {
+        "required": [
+          "bioguideId",
+          "slug",
+          "fullName",
+          "party",
+          "chamber",
+          "state"
+        ],
+        "type": "object",
+        "properties": {
+          "bioguideId": {
+            "type": "string",
+            "nullable": true
+          },
+          "slug": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "party": {
+            "type": "string",
+            "nullable": true
+          },
+          "chamber": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

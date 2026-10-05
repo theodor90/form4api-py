@@ -16,6 +16,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install build
+      # Gate: a failure in any of the next three steps stops the job before the
+      # publish step runs.
+      - name: Install with the dev extra
+        run: python -m pip install -e ".[dev]"
+      - name: Tests
+        run: python -m pytest
+      - name: Release check (offline)
+        run: python scripts/release_check.py --offline
       - run: python -m build
       - uses: pypa/gh-action-pypi-publish@release/v1

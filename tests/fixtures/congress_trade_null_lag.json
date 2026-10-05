@@ -1,0 +1,21 @@
+{
+  "politician": {
+    "bioguideId": "X000001",
+    "slug": "example-member",
+    "fullName": "Example Member",
+    "party": "D",
+    "chamber": "House",
+    "state": "CA"
+  },
+  "ticker": "SONY",
+  "assetName": "Sony Group Corp",
+  "assetType": "Stock",
+  "ownerType": "Self",
+  "transactionType": "Purchase",
+  "amountLow": 1001,
+  "amountHigh": 15000,
+  "transactionDate": "2026-03-01T00:00:00Z",
+  "disclosureDate": "2026-02-01T00:00:00Z",
+  "disclosureLagDays": null,
+  "dateQuality": "transaction_after_disclosure"
+}

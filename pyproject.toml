@@ -18,7 +18,18 @@ Documentation = "https://www.form4api.com/docs"
 Repository = "https://github.com/theodor90/form4api-py.git"
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-httpx>=0.30", "respx>=0.21"]
+# `contract` is what the live contract stage installs into its throwaway venv;
+# `dev` is everything scripts/release_check.py and CI need on the host.
+contract = ["openapi-schema-validator>=0.6.2"]
+dev = [
+    "pytest>=8",
+    "pytest-httpx>=0.30",
+    "respx>=0.21",
+    "build>=1.2",
+    "twine>=5.1",
+    "check-wheel-contents>=0.6",
+    "openapi-schema-validator>=0.6.2",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
