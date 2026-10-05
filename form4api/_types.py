@@ -3,6 +3,21 @@
 from dataclasses import dataclass, fields
 
 
+class _FromDictMixin:
+    """Tolerant construction for flat dataclasses built from API payloads.
+
+    The API only ever adds fields, and a dataclass constructor rejects unknown
+    keyword arguments, so `Model(**data)` crashes on the first new field.
+    `_from_dict` drops keys the dataclass does not declare. Key conversion
+    (camelCase to snake_case) already happened in the client before this runs.
+    Models with nested dataclasses override `_from_dict` to hydrate them."""
+
+    @classmethod
+    def _from_dict(cls, data: dict):
+        known = {f.name for f in fields(cls)}  # type: ignore[arg-type]
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
 @dataclass
 class TopHolder:
     manager_cik: str | None = None
@@ -88,7 +103,7 @@ class Transaction:
 
 
 @dataclass
-class Insider:
+class Insider(_FromDictMixin):
     cik: str
     name: str
     is_director: bool
@@ -99,7 +114,7 @@ class Insider:
 
 
 @dataclass
-class Company:
+class Company(_FromDictMixin):
     cik: str
     name: str
     ticker: str | None
@@ -155,7 +170,7 @@ class SearchResults:
 
 
 @dataclass
-class InsiderSignal:
+class InsiderSignal(_FromDictMixin):
     ticker: str | None
     company_name: str
     signal_date: str
@@ -166,7 +181,7 @@ class InsiderSignal:
 
 
 @dataclass
-class WebhookCreated:
+class WebhookCreated(_FromDictMixin):
     subscription_id: int
     url: str
     event_types: list[str]
@@ -176,7 +191,7 @@ class WebhookCreated:
 
 
 @dataclass
-class WebhookSubscription:
+class WebhookSubscription(_FromDictMixin):
     subscription_id: int
     url: str
     event_types: list[str]
@@ -185,7 +200,7 @@ class WebhookSubscription:
 
 
 @dataclass
-class WebhookEvent:
+class WebhookEvent(_FromDictMixin):
     delivery_id: int
     subscription_id: int
     event_type: str

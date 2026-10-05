@@ -14,11 +14,11 @@ class WebhooksResource:
 
     def create(self, url: str, event_types: list[str]) -> WebhookCreated:
         data = self._client._post("/v1/webhooks", {"url": url, "eventTypes": event_types})
-        return WebhookCreated(**data)
+        return WebhookCreated._from_dict(data)
 
     def list(self) -> list[WebhookSubscription]:
         data = self._client._get("/v1/webhooks")
-        return [WebhookSubscription(**item) for item in data]
+        return [WebhookSubscription._from_dict(item) for item in data]
 
     def delete(self, subscription_id: int) -> None:
         self._client._delete(f"/v1/webhooks/{subscription_id}")
@@ -28,7 +28,7 @@ class WebhooksResource:
         if since is not None:
             params["since"] = since
         data = self._client._get("/v1/webhooks/events", params or None)
-        return [WebhookEvent(**item) for item in data]
+        return [WebhookEvent._from_dict(item) for item in data]
 
 
 class AsyncWebhooksResource:
@@ -39,11 +39,11 @@ class AsyncWebhooksResource:
 
     async def create(self, url: str, event_types: list[str]) -> WebhookCreated:
         data = await self._client._post("/v1/webhooks", {"url": url, "eventTypes": event_types})
-        return WebhookCreated(**data)
+        return WebhookCreated._from_dict(data)
 
     async def list(self) -> list[WebhookSubscription]:
         data = await self._client._get("/v1/webhooks")
-        return [WebhookSubscription(**item) for item in data]
+        return [WebhookSubscription._from_dict(item) for item in data]
 
     async def delete(self, subscription_id: int) -> None:
         await self._client._delete(f"/v1/webhooks/{subscription_id}")
@@ -53,4 +53,4 @@ class AsyncWebhooksResource:
         if since is not None:
             params["since"] = since
         data = await self._client._get("/v1/webhooks/events", params or None)
-        return [WebhookEvent(**item) for item in data]
+        return [WebhookEvent._from_dict(item) for item in data]

@@ -19,11 +19,11 @@ class CompaniesResource(GeneratedCompaniesResource):
 
     def get(self, ticker: str) -> Company:
         data = self._client._get(f"/v1/companies/{ticker}")
-        return Company(**data)
+        return Company._from_dict(data)
 
     def insiders(self, ticker: str) -> list[Insider]:
         data = self._client._get(f"/v1/companies/{ticker}/insiders")
-        return [Insider(**item) for item in data]
+        return [Insider._from_dict(item) for item in data]
 
 
 class AsyncCompaniesResource(GeneratedAsyncCompaniesResource):
@@ -41,11 +41,11 @@ class AsyncCompaniesResource(GeneratedAsyncCompaniesResource):
 
     async def get(self, ticker: str) -> Company:
         data = await self._client._get(f"/v1/companies/{ticker}")
-        return Company(**data)
+        return Company._from_dict(data)
 
     async def insiders(self, ticker: str) -> list[Insider]:
         data = await self._client._get(f"/v1/companies/{ticker}/insiders")
-        return [Insider(**item) for item in data]
+        return [Insider._from_dict(item) for item in data]
 
 
 
