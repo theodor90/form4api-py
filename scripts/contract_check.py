@@ -98,16 +98,26 @@ def validate_instance(spec: dict, schema: dict, instance: Any, max_errors: int =
     additional properties are allowed (the backend adding a field is not drift
     the SDK needs to fail on). `$ref`s resolve against the spec's components.
     """
-    from openapi_schema_validator import OAS30Validator, OAS31Validator
+    from openapi_schema_validator import (
+        OAS30Validator,
+        OAS31Validator,
+        oas30_format_checker,
+        oas31_format_checker,
+    )
 
     openapi = str(spec.get("openapi", "3.0"))
-    validator_cls = OAS31Validator if openapi.startswith("3.1") else OAS30Validator
+    is31 = openapi.startswith("3.1")
+    validator_cls = OAS31Validator if is31 else OAS30Validator
+    # Formats are checked too (date-time must carry an RFC 3339 offset), matching the
+    # JS gate's ajv-formats. Without this, the 2026-10-05 live run passed a
+    # timezone-less "quarter" here while the JS gate failed it.
+    format_checker = oas31_format_checker if is31 else oas30_format_checker
     # Embed components in the root so "#/components/schemas/X" resolves.
     root = dict(schema)
     root["components"] = spec.get("components", {})
 
     grouped: dict[tuple[str, str], int] = {}
-    for err in validator_cls(root).iter_errors(instance):
+    for err in validator_cls(root, format_checker=format_checker).iter_errors(instance):
         where = "/".join("[]" if isinstance(p, int) else str(p) for p in err.absolute_path) or "(root)"
         msg = err.message if len(err.message) <= 160 else err.message[:157] + "..."
         grouped[(where, msg)] = grouped.get((where, msg), 0) + 1

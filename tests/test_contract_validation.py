@@ -81,6 +81,17 @@ def test_nested_ref_is_resolved_and_checked(spec: dict, null_lag_row: dict) -> N
     assert any("politician/state" in e for e in _errors(spec, [null_lag_row]))
 
 
+def test_date_time_without_offset_fails() -> None:
+    """Formats are enforced, matching the JS gate. The live API returned
+    "2026-06-30T00:00:00" (no offset) for a date-time field on 2026-10-05; RFC 3339
+    requires an offset, and JS parses an offset-less value as local time."""
+    tiny = {"openapi": "3.0.1", "components": {}}
+    schema = {"type": "object", "properties": {"quarter": {"type": "string", "format": "date-time"}}}
+    assert contract_check.validate_instance(tiny, schema, {"quarter": "2026-06-30T00:00:00Z"}) == []
+    errors = contract_check.validate_instance(tiny, schema, {"quarter": "2026-06-30T00:00:00"})
+    assert any("quarter" in e and "date-time" in e for e in errors), errors
+
+
 def test_additional_properties_are_allowed(spec: dict, null_lag_row: dict) -> None:
     null_lag_row["somethingTheBackendAddedLater"] = {"any": "shape"}
     assert _errors(spec, [null_lag_row]) == []
