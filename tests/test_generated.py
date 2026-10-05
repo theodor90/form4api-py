@@ -17,7 +17,7 @@ import respx
 
 from form4api import Form4ApiClient
 from form4api._client import AsyncForm4ApiClient
-from form4api._generated import Form144Response
+from form4api._generated import CongressTradeDto, ConvergenceCongressLegDto, Form144Response
 
 BASE = "http://test.local"
 
@@ -431,3 +431,50 @@ def test_insiders_directory_does_not_shadow_insiders_list(client: Form4ApiClient
     route = respx.get(f"{BASE}/v1/insiders").mock(return_value=httpx.Response(200, json=[]))
     client.insiders.list()
     assert route.calls.last.request.url.path == "/v1/insiders"
+
+
+@respx.mock
+def test_congress_trades_parse_null_lag_and_date_quality(client: Form4ApiClient) -> None:
+    base = {
+        "ticker": "NVDA",
+        "assetName": "NVIDIA",
+        "transactionType": "Purchase",
+        "amountLow": 1001,
+        "amountHigh": 15000,
+        "disclosureDate": "2026-01-10",
+    }
+    respx.get(f"{BASE}/v1/congress/trades").mock(
+        return_value=httpx.Response(
+            200,
+            json=[
+                {**base, "transactionDate": "2026-01-01", "disclosureLagDays": 9, "dateQuality": None},
+                {
+                    **base,
+                    "transactionDate": "2026-02-01",
+                    "disclosureLagDays": None,
+                    "dateQuality": "transaction_after_disclosure",
+                },
+            ],
+        )
+    )
+    rows = client.congress.trades()
+
+    assert isinstance(rows[0], CongressTradeDto)
+    assert rows[0].disclosure_lag_days == 9
+    assert rows[0].date_quality is None
+    # A flagged row: no lag, a reason code, and the raw dates unchanged.
+    assert rows[1].disclosure_lag_days is None
+    assert rows[1].date_quality == "transaction_after_disclosure"
+    assert rows[1].transaction_date == "2026-02-01"
+    assert rows[1].disclosure_date == "2026-01-10"
+
+
+def test_convergence_leg_models_date_quality_as_nullable() -> None:
+    leg = ConvergenceCongressLegDto._from_dict(
+        {"full_name": "X", "disclosure_lag_days": 12, "date_quality": None, "brand_new_field": 1}
+    )
+    assert leg.disclosure_lag_days == 12
+    assert leg.date_quality is None
+    # Same fields on both congress DTOs, so the two stay in step with the spec.
+    assert {"disclosure_lag_days", "date_quality"} <= set(CongressTradeDto.__dataclass_fields__)
+    assert {"disclosure_lag_days", "date_quality"} <= set(ConvergenceCongressLegDto.__dataclass_fields__)

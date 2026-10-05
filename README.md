@@ -76,6 +76,19 @@ asyncio.run(main())
 | `client.status` | `.history(**params)` |
 | `client.webhooks` | `.create(url, event_types)`, `.list()`, `.delete(id)`, `.events(**params)` |
 
+**Congress date quality.** Each congress trade (and convergence leg) has
+`disclosure_lag_days: int | None` and `date_quality: str | None`. When the
+filing's own dates are impossible or implausible, the lag is `None` and
+`date_quality` is one of `"transaction_after_disclosure"`,
+`"future_transaction_date"` or `"implausible_lag"`; the raw dates are still
+returned. A lag over 45 days is not a legal finding.
+
+```python
+for t in client.congress.trades(ticker="NVDA"):
+    lag = f"dates unreliable ({t.date_quality})" if t.disclosure_lag_days is None else f"{t.disclosure_lag_days}d"
+    print(t.politician.full_name, t.transaction_date, lag)
+```
+
 Every plan-gated endpoint the API exposes has a typed method here. Calling one
 your key isn't entitled to raises `PlanError` (HTTP 402) carrying
 `required_plan`, `current_plan`, and `upgrade_url` rather than failing opaquely.

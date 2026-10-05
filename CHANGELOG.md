@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## 0.9.0 — 2026-10-05
+
+- **Congress date quality (backend insiderapi #330/#331).** `CongressTradeDto`
+  and `ConvergenceCongressLegDto` gained `date_quality: str | None`.
+  `disclosure_lag_days` was already `int | None` in these models (every
+  generated field is optional), so its type is unchanged, but it can now
+  actually be `None`: when the filing's own dates are impossible or
+  implausible the lag is `None` and `date_quality` names the reason
+  (`"transaction_after_disclosure"`, `"future_transaction_date"` or
+  `"implausible_lag"`; a free-form string in the spec, not an enum). A `None`
+  lag with a code means the filing's own dates are impossible; the raw
+  `transaction_date` and `disclosure_date` are still returned and flagged rows
+  are never dropped. On convergence legs `date_quality` is always `None` in
+  practice (flagged trades are excluded from convergence). A lag over 45 days
+  is not a legal finding. Code that does arithmetic on `disclosure_lag_days`
+  needs a `None` check. Webhook payloads (`CongressTradeFiled`,
+  `ConvergenceSignal`) carry the same two fields in PascalCase; this SDK has no
+  webhook payload models, so nothing to change there.
+- Regenerated `form4api/_generated.py` from the live spec: the
+  `congress.trades()` and `signals.convergence()` docstrings (sync and async)
+  pick up the new descriptions, and the spec's `SearchCompanyResult` /
+  `SearchInsiderResult` / `SearchResponse` response dataclasses are now
+  emitted too. They are not exported; `client.search()` keeps returning the
+  hand-written `SearchResults`.
+
+Also in this release (previously unreleased):
+
 - Added `client.search(q, limit=None)` (sync and async) for the new
   `GET /v1/search` endpoint — a combined company + insider lookup by name or
   ticker, returning typed `SearchResults` (`companies: list[SearchCompany]`,
