@@ -474,6 +474,8 @@ class DirectoryLetter:
 class ErrorDetail:
     code: str | None = None
     current_plan: str | None = None
+    did_you_mean: str | None = None
+    docs_url: str | None = None
     message: str | None = None
     reason: str | None = None
     request_id: str | None = None
