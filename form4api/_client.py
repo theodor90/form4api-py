@@ -158,6 +158,10 @@ class Form4ApiClient:
         res = self._request("PUT", path, json=body)
         return _normalise(self._parse(res))
 
+    def _patch(self, path: str, body: Any = None) -> Any:
+        res = self._request("PATCH", path, json=body)
+        return _normalise(self._parse(res))
+
     def _delete(self, path: str) -> None:
         res = self._request("DELETE", path)
         if not res.is_success and res.status_code != 204:
@@ -288,6 +292,10 @@ class AsyncForm4ApiClient:
 
     async def _put(self, path: str, body: Any = None) -> Any:
         res = await self._request("PUT", path, json=body)
+        return _normalise(self._parse(res))
+
+    async def _patch(self, path: str, body: Any = None) -> Any:
+        res = await self._request("PATCH", path, json=body)
         return _normalise(self._parse(res))
 
     async def _delete(self, path: str) -> None:

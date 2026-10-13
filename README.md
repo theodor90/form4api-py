@@ -75,7 +75,7 @@ asyncio.run(main())
 | `client.stats` | `.get()` — public, no key required |
 | `client.data_quality` | `.get()` — public, no key required |
 | `client.status` | `.history()` — takes no parameters |
-| `client.webhooks` | `.create(url, event_types, auth_header=None)`, `.list()`, `.delete(id)`, `.events(**params)`, `.enable(id)`, `.test(id)`, `.set_auth_header(id, name, value)`, `.delete_auth_header(id)` |
+| `client.webhooks` | `.create(url, event_types, auth_header=None)`, `.list()`, `.update(id, url)`, `.delete(id)`, `.events(**params)`, `.enable(id)`, `.test(id)`, `.set_auth_header(id, name, value)`, `.delete_auth_header(id)` |
 | `verify_webhook(body, signature, secret)` | Top-level function (not on the client) that checks the `X-Insider-Signature` header on a delivery |
 
 **Congress date quality.** Each congress trade (and convergence leg) has
@@ -215,6 +215,7 @@ sub = client.webhooks.create(
 )
 print(sub.secret)  # shown once; store it
 
+client.webhooks.update(sub.subscription_id, "https://example.com/new-hook")  # change the URL; returns WebhookSubscription incl. url_warning
 client.webhooks.test(sub.subscription_id)      # WebhookTestResult(delivered, status_code, duration_ms, error)
 client.webhooks.enable(sub.subscription_id)    # undo an auto-disable (disabled_reason == "delivery_failures")
 client.webhooks.set_auth_header(sub.subscription_id, "Authorization", "Bearer new")
@@ -242,6 +243,24 @@ body. `CongressTradeFiled` and `ConvergenceSignal` carry the full event body.
 `auth_header_name`, all `None` when not applicable. The auth header value is
 write-only and never returned. `webhooks.test()` reports a failed send as
 `delivered=False` with an `error`, it does not raise.
+
+**Moving a webhook to a new URL.** `update(id, url)` changes the delivery URL
+and keeps the id, secret, event types and auth header. It does not re-enable a
+subscription the system disabled, so call `enable(id)` afterwards if needed.
+The `last_*` health fields come back `None` because they described the old URL.
+
+```python
+# Started on a tunnel, now moving to a stable endpoint
+moved = client.webhooks.update(sub.subscription_id, "https://example.com/hooks/form4api")
+if not moved.is_active:
+    client.webhooks.enable(moved.subscription_id)
+```
+
+**`url_warning`.** `create()`, `update()` and each `list()` item carry
+`url_warning`: a string when the URL's host is a temporary tunnel or test host
+(trycloudflare, ngrok, webhook.site, loca.lt, serveo), otherwise `None`. It is a
+warning only; the subscription is saved either way, and deliveries stop when the
+tunnel closes. URLs over 500 characters are rejected with 400 `INVALID_URL`.
 
 **Verifying deliveries.** Each delivery carries
 `X-Insider-Signature: sha256=<hex HMAC-SHA256(secret, raw body)>`. Verify it

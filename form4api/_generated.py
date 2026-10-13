@@ -1378,6 +1378,21 @@ class TransactionResponse:
 
 
 @dataclass
+class UpdateWebhookRequest:
+    url: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "UpdateWebhookRequest":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
 class UptimeDayBucket:
     date: str | None = None
     expected: int | None = None

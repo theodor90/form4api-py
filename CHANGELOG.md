@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## 0.11.0 — 2026-10-13
+
+- **`webhooks.update(id, url)` (sync and async).** Changes the delivery URL of
+  a webhook subscription (`PATCH /v1/webhooks/{id}`) and returns the updated
+  `WebhookSubscription`. The id, secret, event types and auth header are kept.
+  The URL is checked the same way as on create (HTTPS, public address, at most
+  500 characters); a rejected URL raises `Form4ApiError` with the code in
+  `error_code` (`INVALID_REQUEST`, `INVALID_URL`, `INSECURE_URL`,
+  `PRIVATE_ADDRESS` or `UNRESOLVABLE_HOST`). It works on disabled
+  subscriptions but does not re-enable them, so call `enable(id)` afterwards.
+  The `last_*` health fields come back `None`. Available on every plan.
+- **`url_warning`.** `WebhookSubscription` and `WebhookCreated` gain
+  `url_warning`: a string when the URL's host is a temporary tunnel or test host
+  (trycloudflare, ngrok, webhook.site, loca.lt, serveo), otherwise `None`. It is
+  a warning only. Older payloads without the field still parse (default `None`).
+- `webhooks.create()` now gets a 400 `INVALID_URL` for URLs over 500
+  characters (API change).
+
 ## 0.10.0 — 2026-10-13
 
 - **Webhooks (sync and async).** New methods: `webhooks.enable(id)` (re-enable
