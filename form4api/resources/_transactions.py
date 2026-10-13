@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncGenerator, Generator
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from form4api._errors import PaginationLimitError, PlanError, is_pagination_depth_error
 from form4api._types import Transaction
@@ -31,6 +31,20 @@ def _list_params(
         max_value: float | None = None,
         min_shares: float | None = None,
         max_shares: float | None = None,
+        min_return_1d: float | None = None,
+        max_return_1d: float | None = None,
+        min_return_1w: float | None = None,
+        max_return_1w: float | None = None,
+        min_return_1m: float | None = None,
+        max_return_1m: float | None = None,
+        min_return_3m: float | None = None,
+        max_return_3m: float | None = None,
+        min_return_6m: float | None = None,
+        max_return_6m: float | None = None,
+        has_returns: bool | None = None,
+        inst_ownership_trend: Literal["increasing", "decreasing", "stable"] | None = None,
+        role: Literal["officer", "director", "ten_percent_owner"] | None = None,
+        sort: Literal["date", "value"] | None = None,
     page: int,
     per_page: int,
 ) -> dict[str, str]:
@@ -60,9 +74,21 @@ def _list_params(
     for key, value in (
         ("min_value", min_value), ("max_value", max_value),
         ("min_shares", min_shares), ("max_shares", max_shares),
+        ("min_return_1d", min_return_1d), ("max_return_1d", max_return_1d),
+        ("min_return_1w", min_return_1w), ("max_return_1w", max_return_1w),
+        ("min_return_1m", min_return_1m), ("max_return_1m", max_return_1m),
+        ("min_return_3m", min_return_3m), ("max_return_3m", max_return_3m),
+        ("min_return_6m", min_return_6m), ("max_return_6m", max_return_6m),
     ):
         if value is not None:
             params[key] = str(value)
+    if has_returns is not None:
+        params["has_returns"] = str(has_returns).lower()
+    for key, value in (
+        ("inst_ownership_trend", inst_ownership_trend), ("role", role), ("sort", sort),
+    ):
+        if value is not None:
+            params[key] = value
     return params
 
 
@@ -92,6 +118,20 @@ class TransactionsResource:
         max_value: float | None = None,
         min_shares: float | None = None,
         max_shares: float | None = None,
+        min_return_1d: float | None = None,
+        max_return_1d: float | None = None,
+        min_return_1w: float | None = None,
+        max_return_1w: float | None = None,
+        min_return_1m: float | None = None,
+        max_return_1m: float | None = None,
+        min_return_3m: float | None = None,
+        max_return_3m: float | None = None,
+        min_return_6m: float | None = None,
+        max_return_6m: float | None = None,
+        has_returns: bool | None = None,
+        inst_ownership_trend: Literal["increasing", "decreasing", "stable"] | None = None,
+        role: Literal["officer", "director", "ten_percent_owner"] | None = None,
+        sort: Literal["date", "value"] | None = None,
         page: int = 1,
         per_page: int = 50,
     ) -> list[Transaction]:
@@ -99,6 +139,13 @@ class TransactionsResource:
 
         `ticker` accepts up to 25 comma-separated symbols (e.g.
         `ticker="AAPL,MSFT,NVDA"`), same convention as `codes`/`exclude_codes`.
+        New in 0.10.0: `min_return_1d`..`max_return_6m` (1d/1w/1m/3m/6m) and
+        `has_returns` are Pro+ post-trade-return filters, as FRACTIONS (0.2 =
+        +20%). `inst_ownership_trend` is "increasing", "decreasing" or "stable"
+        (13F ownership trend). `role` is "officer", "director" or
+        "ten_percent_owner". `sort` is "date" (default) or "value" (largest
+        trade first, applied before pagination).
+
         `filed_from`/`filed_to` filter on Filing.FiledAt (inclusive) — the date
         the filing hit EDGAR — as opposed to `from_date`/`to_date`, which filter
         on the transaction's own reported date. Accepts a date or ISO string,
@@ -113,6 +160,20 @@ class TransactionsResource:
             exclude_category=exclude_category, exclude_derivative=exclude_derivative,
             significant=significant, min_value=min_value, max_value=max_value,
             min_shares=min_shares, max_shares=max_shares,
+            min_return_1d=min_return_1d,
+            max_return_1d=max_return_1d,
+            min_return_1w=min_return_1w,
+            max_return_1w=max_return_1w,
+            min_return_1m=min_return_1m,
+            max_return_1m=max_return_1m,
+            min_return_3m=min_return_3m,
+            max_return_3m=max_return_3m,
+            min_return_6m=min_return_6m,
+            max_return_6m=max_return_6m,
+            has_returns=has_returns,
+            inst_ownership_trend=inst_ownership_trend,
+            role=role,
+            sort=sort,
             page=page, per_page=per_page,
         )
         data = self._client._get("/v1/transactions", params)
@@ -140,6 +201,20 @@ class TransactionsResource:
         max_value: float | None = None,
         min_shares: float | None = None,
         max_shares: float | None = None,
+        min_return_1d: float | None = None,
+        max_return_1d: float | None = None,
+        min_return_1w: float | None = None,
+        max_return_1w: float | None = None,
+        min_return_1m: float | None = None,
+        max_return_1m: float | None = None,
+        min_return_3m: float | None = None,
+        max_return_3m: float | None = None,
+        min_return_6m: float | None = None,
+        max_return_6m: float | None = None,
+        has_returns: bool | None = None,
+        inst_ownership_trend: Literal["increasing", "decreasing", "stable"] | None = None,
+        role: Literal["officer", "director", "ten_percent_owner"] | None = None,
+        sort: Literal["date", "value"] | None = None,
         per_page: int = 50,
         max_pages: int | None = None,
     ) -> Generator[list[Transaction], None, None]:
@@ -170,6 +245,20 @@ class TransactionsResource:
                     exclude_derivative=exclude_derivative, significant=significant,
                     min_value=min_value, max_value=max_value,
                     min_shares=min_shares, max_shares=max_shares,
+                    min_return_1d=min_return_1d,
+                    max_return_1d=max_return_1d,
+                    min_return_1w=min_return_1w,
+                    max_return_1w=max_return_1w,
+                    min_return_1m=min_return_1m,
+                    max_return_1m=max_return_1m,
+                    min_return_3m=min_return_3m,
+                    max_return_3m=max_return_3m,
+                    min_return_6m=min_return_6m,
+                    max_return_6m=max_return_6m,
+                    has_returns=has_returns,
+                    inst_ownership_trend=inst_ownership_trend,
+                    role=role,
+                    sort=sort,
                     page=page, per_page=per_page,
                 )
             except PlanError as err:
@@ -218,6 +307,20 @@ class AsyncTransactionsResource:
         max_value: float | None = None,
         min_shares: float | None = None,
         max_shares: float | None = None,
+        min_return_1d: float | None = None,
+        max_return_1d: float | None = None,
+        min_return_1w: float | None = None,
+        max_return_1w: float | None = None,
+        min_return_1m: float | None = None,
+        max_return_1m: float | None = None,
+        min_return_3m: float | None = None,
+        max_return_3m: float | None = None,
+        min_return_6m: float | None = None,
+        max_return_6m: float | None = None,
+        has_returns: bool | None = None,
+        inst_ownership_trend: Literal["increasing", "decreasing", "stable"] | None = None,
+        role: Literal["officer", "director", "ten_percent_owner"] | None = None,
+        sort: Literal["date", "value"] | None = None,
         page: int = 1,
         per_page: int = 50,
     ) -> list[Transaction]:
@@ -231,6 +334,20 @@ class AsyncTransactionsResource:
             exclude_category=exclude_category, exclude_derivative=exclude_derivative,
             significant=significant, min_value=min_value, max_value=max_value,
             min_shares=min_shares, max_shares=max_shares,
+            min_return_1d=min_return_1d,
+            max_return_1d=max_return_1d,
+            min_return_1w=min_return_1w,
+            max_return_1w=max_return_1w,
+            min_return_1m=min_return_1m,
+            max_return_1m=max_return_1m,
+            min_return_3m=min_return_3m,
+            max_return_3m=max_return_3m,
+            min_return_6m=min_return_6m,
+            max_return_6m=max_return_6m,
+            has_returns=has_returns,
+            inst_ownership_trend=inst_ownership_trend,
+            role=role,
+            sort=sort,
             page=page, per_page=per_page,
         )
         data = await self._client._get("/v1/transactions", params)
@@ -258,6 +375,20 @@ class AsyncTransactionsResource:
         max_value: float | None = None,
         min_shares: float | None = None,
         max_shares: float | None = None,
+        min_return_1d: float | None = None,
+        max_return_1d: float | None = None,
+        min_return_1w: float | None = None,
+        max_return_1w: float | None = None,
+        min_return_1m: float | None = None,
+        max_return_1m: float | None = None,
+        min_return_3m: float | None = None,
+        max_return_3m: float | None = None,
+        min_return_6m: float | None = None,
+        max_return_6m: float | None = None,
+        has_returns: bool | None = None,
+        inst_ownership_trend: Literal["increasing", "decreasing", "stable"] | None = None,
+        role: Literal["officer", "director", "ten_percent_owner"] | None = None,
+        sort: Literal["date", "value"] | None = None,
         per_page: int = 50,
         max_pages: int | None = None,
     ) -> AsyncGenerator[list[Transaction], None]:
@@ -279,6 +410,20 @@ class AsyncTransactionsResource:
                     exclude_category=exclude_category, exclude_derivative=exclude_derivative,
                     significant=significant, min_value=min_value, max_value=max_value,
                     min_shares=min_shares, max_shares=max_shares,
+                    min_return_1d=min_return_1d,
+                    max_return_1d=max_return_1d,
+                    min_return_1w=min_return_1w,
+                    max_return_1w=max_return_1w,
+                    min_return_1m=min_return_1m,
+                    max_return_1m=max_return_1m,
+                    min_return_3m=min_return_3m,
+                    max_return_3m=max_return_3m,
+                    min_return_6m=min_return_6m,
+                    max_return_6m=max_return_6m,
+                    has_returns=has_returns,
+                    inst_ownership_trend=inst_ownership_trend,
+                    role=role,
+                    sort=sort,
                     page=page, per_page=per_page,
                 )
             except PlanError as err:

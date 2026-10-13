@@ -17,7 +17,11 @@ def verify_webhook(payload: str | bytes, signature: str, secret: str) -> bool:
     if isinstance(payload, str):
         payload = payload.encode()
     expected = "sha256=" + hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, signature)
+    if not isinstance(signature, str):
+        return False
+    # Compare as bytes: compare_digest raises TypeError on a non-ASCII str, and a
+    # garbage header should be a failed check, not an exception.
+    return hmac.compare_digest(expected.encode(), signature.encode())
 
 
 

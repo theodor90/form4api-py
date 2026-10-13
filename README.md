@@ -70,11 +70,13 @@ asyncio.run(main())
 | `client.congress` | `.trades(**params)`, `.politicians(**params)` *(Pro)*, `.politician(id_or_slug)` *(Pro)*, `.ticker(ticker)` *(Pro)* |
 | `client.form144` | `.list(**params)` — Business plan |
 | `client.holdings` | `.list(**params)`, `.managers(**params)` — Business plan |
+| `client.ownership` | `.schedule_13dg(**params)` — Business plan (Schedule 13D/13G >5% ownership crossings; filters `ticker`, `form_type`, `is_amendment`, `page`, `per_page`) |
 | `client.filings` | `.list(**params)`, `.recent(**params)`, `.get(accession_number)` |
 | `client.stats` | `.get()` — public, no key required |
 | `client.data_quality` | `.get()` — public, no key required |
-| `client.status` | `.history(**params)` |
-| `client.webhooks` | `.create(url, event_types)`, `.list()`, `.delete(id)`, `.events(**params)` |
+| `client.status` | `.history()` — takes no parameters |
+| `client.webhooks` | `.create(url, event_types, auth_header=None)`, `.list()`, `.delete(id)`, `.events(**params)`, `.enable(id)`, `.test(id)`, `.set_auth_header(id, name, value)`, `.delete_auth_header(id)` |
+| `verify_webhook(body, signature, secret)` | Top-level function (not on the client) that checks the `X-Insider-Signature` header on a delivery |
 
 **Congress date quality.** Each congress trade (and convergence leg) has
 `disclosure_lag_days: int | None` and `date_quality: str | None`. When the
@@ -89,7 +91,10 @@ for t in client.congress.trades(ticker="NVDA"):
     print(t.politician.full_name, t.transaction_date, lag)
 ```
 
-Every plan-gated endpoint the API exposes has a typed method here. Calling one
+Every endpoint that returns typed JSON has a method here, including every
+plan-gated one. The exceptions are the CSV exports, the account/billing
+bootstrap calls and the usage endpoints, which have no typed response and are
+not wrapped. Calling one
 your key isn't entitled to raises `PlanError` (HTTP 402) carrying
 `required_plan`, `current_plan`, and `upgrade_url` rather than failing opaquely.
 
@@ -136,10 +141,23 @@ client.transactions.list(category="open_market")
 client.transactions.list(exclude_category="derivatives")
 client.transactions.list(exclude_derivative=True)
 
-# Trade-size screening (Pro plan or higher)
-client.transactions.list(min_value=1_000_000)          # USD, shares x price
-client.transactions.list(min_shares=10_000, max_shares=100_000)
+# Trade-size screening
+client.transactions.list(min_value=1_000_000)          # USD, shares x price — every plan
+client.transactions.list(max_value=5_000_000)          # Pro+
+client.transactions.list(min_shares=10_000, max_shares=100_000)  # Pro+
+
+# Post-trade return screening (Pro+). Returns are FRACTIONS: 0.2 = +20%.
+# Horizons: 1d, 1w, 1m, 3m, 6m. Rows with no computed return are excluded.
+client.transactions.list(min_return_3m=0.10, max_return_3m=0.50)
+client.transactions.list(has_returns=True)  # only rows with all five horizons computed
+
+# Other filters and ordering
+client.transactions.list(inst_ownership_trend="increasing")  # increasing | decreasing | stable (13F)
+client.transactions.list(role="officer")                     # officer | director | ten_percent_owner
+client.transactions.list(sort="value")                       # "date" (default) or "value" (largest first)
 ```
+
+`paginate()` accepts the same filters.
 
 ### Transaction fields
 
@@ -168,6 +186,7 @@ client.transactions.list(min_shares=10_000, max_shares=100_000)
 | `period_of_report` | `str` | ISO datetime |
 | `return1d`/`return1w`/`return1m`/`return3m`/`return6m` | `float \| None` | Forward return since the transaction date, as a fraction (0.109 = +10.9%); `None` until enough time/price data has elapsed |
 | `value_quality` | `str \| None` | Confidence flag on `total_value`'s pricing source |
+| `filed_at` | `str \| None` | When the filing became public on EDGAR |
 | `accepted_at` | `str \| None` | Precise UTC SEC-acceptance instant; `None` if not captured |
 | `document_url` | `str \| None` | Public SEC document URL |
 | `institutional_ownership` | `InstitutionalOwnership \| None` | Latest 13F institutional ownership snapshot for the ticker, when available |
@@ -185,6 +204,57 @@ client.transactions.list(min_shares=10_000, max_shares=100_000)
 | `sic_description` | `str \| None` | SEC SIC industry description |
 | `state_of_incorporation` | `str \| None` | Two-letter state code |
 | `website` | `str \| None` | Company website as filed with SEC |
+
+### Webhooks
+
+```python
+sub = client.webhooks.create(
+    "https://example.com/hook",
+    ["TransactionFiled", "ClusterBuy"],
+    auth_header={"name": "Authorization", "value": "Bearer ..."},  # optional, sent with every delivery
+)
+print(sub.secret)  # shown once; store it
+
+client.webhooks.test(sub.subscription_id)      # WebhookTestResult(delivered, status_code, duration_ms, error)
+client.webhooks.enable(sub.subscription_id)    # undo an auto-disable (disabled_reason == "delivery_failures")
+client.webhooks.set_auth_header(sub.subscription_id, "Authorization", "Bearer new")
+client.webhooks.delete_auth_header(sub.subscription_id)  # returns None (204, no body)
+```
+
+**Event types** (exact names):
+
+| Event | Plan |
+|---|---|
+| `TransactionFiled` | Free |
+| `ClusterBuy` | Free |
+| `ClusterSell` | Free |
+| `CongressTradeFiled` | Starter+ |
+| `ConvergenceSignal` | Pro+ |
+
+Payloads are compact PascalCase references with no envelope (the body is the
+bare object), for example `{"FilingId": ..., "AccessionNumber": ...}` for
+`TransactionFiled`. The event name is in the `X-Event-Type` header, not the
+body. `CongressTradeFiled` and `ConvergenceSignal` carry the full event body.
+
+`webhooks.list()` returns delivery health on each `WebhookSubscription`:
+`is_active`, `disabled_at`, `disabled_reason`, `last_attempt_at`,
+`last_success_at`, `last_status_code`, `last_error_class`, `is_read_only` and
+`auth_header_name`, all `None` when not applicable. The auth header value is
+write-only and never returned. `webhooks.test()` reports a failed send as
+`delivered=False` with an `error`, it does not raise.
+
+**Verifying deliveries.** Each delivery carries
+`X-Insider-Signature: sha256=<hex HMAC-SHA256(secret, raw body)>`. Verify it
+against the raw request body, before parsing JSON:
+
+```python
+from form4api import verify_webhook
+
+body = request.get_data()                     # raw bytes, e.g. Flask
+sig = request.headers["X-Insider-Signature"]
+if not verify_webhook(body, sig, WEBHOOK_SECRET):   # str or bytes; constant-time compare
+    abort(401)
+```
 
 ### Search
 
