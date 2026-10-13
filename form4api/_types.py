@@ -194,6 +194,10 @@ class WebhookCreated(_FromDictMixin):
     # events are still delivered). The auth header VALUE is never returned.
     is_read_only: bool | None = None
     auth_header_name: str | None = None
+    # Added 0.11.0. A string when the URL's host is a temporary tunnel or test
+    # host (ngrok, trycloudflare, webhook.site, ...), otherwise None. A warning
+    # only; the subscription is created either way.
+    url_warning: str | None = None
 
 
 @dataclass
@@ -215,6 +219,8 @@ class WebhookSubscription(_FromDictMixin):
     last_status_code: int | None = None
     last_error_class: str | None = None
     auth_header_name: str | None = None
+    # Added 0.11.0. Same meaning as on WebhookCreated; also returned by update().
+    url_warning: str | None = None
 
 
 @dataclass

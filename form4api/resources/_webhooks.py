@@ -47,6 +47,19 @@ class WebhooksResource:
         data = self._client._get("/v1/webhooks")
         return [WebhookSubscription._from_dict(item) for item in data]
 
+    def update(self, subscription_id: int, url: str) -> WebhookSubscription:
+        """Change the delivery URL of a subscription, keeping its id, secret,
+        event types and auth header. The URL is checked like `create` (HTTPS,
+        public address, at most 500 characters); a bad URL raises `Form4ApiError`
+        (HTTP 400) with `error_code` INVALID_REQUEST, INVALID_URL, INSECURE_URL,
+        PRIVATE_ADDRESS or UNRESOLVABLE_HOST. Works on active and auto-disabled
+        subscriptions but does NOT re-enable a disabled one: call `enable()`
+        afterwards. The `last_*` health fields come back `None` because they
+        described the old URL. Shares the 3-per-minute webhook budget with
+        `create`. All plans."""
+        data = self._client._patch(f"/v1/webhooks/{subscription_id}", {"url": url})
+        return WebhookSubscription._from_dict(data)
+
     def delete(self, subscription_id: int) -> None:
         self._client._delete(f"/v1/webhooks/{subscription_id}")
 
@@ -100,6 +113,11 @@ class AsyncWebhooksResource:
     async def list(self) -> list[WebhookSubscription]:
         data = await self._client._get("/v1/webhooks")
         return [WebhookSubscription._from_dict(item) for item in data]
+
+    async def update(self, subscription_id: int, url: str) -> WebhookSubscription:
+        """See `WebhooksResource.update`."""
+        data = await self._client._patch(f"/v1/webhooks/{subscription_id}", {"url": url})
+        return WebhookSubscription._from_dict(data)
 
     async def delete(self, subscription_id: int) -> None:
         await self._client._delete(f"/v1/webhooks/{subscription_id}")
