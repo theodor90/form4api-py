@@ -36,6 +36,7 @@ from form4api._generated import (
     GeneratedAsyncFilingsResource,
     GeneratedAsyncForm144Resource,
     GeneratedAsyncHoldingsResource,
+    GeneratedAsyncOwnershipResource,
     GeneratedAsyncStatsResource,
     GeneratedAsyncStatusResource,
     GeneratedCongressResource,
@@ -43,6 +44,7 @@ from form4api._generated import (
     GeneratedFilingsResource,
     GeneratedForm144Resource,
     GeneratedHoldingsResource,
+    GeneratedOwnershipResource,
     GeneratedStatsResource,
     GeneratedStatusResource,
 )
@@ -93,6 +95,7 @@ class Form4ApiClient:
         self.filings = GeneratedFilingsResource(self)
         self.form144 = GeneratedForm144Resource(self)
         self.holdings = GeneratedHoldingsResource(self)
+        self.ownership = GeneratedOwnershipResource(self)
         self.stats = GeneratedStatsResource(self)
         self.status = GeneratedStatusResource(self)
         self.data_quality = GeneratedDataQualityResource(self)
@@ -149,6 +152,10 @@ class Form4ApiClient:
 
     def _post(self, path: str, body: Any = None) -> Any:
         res = self._request("POST", path, json=body)
+        return _normalise(self._parse(res))
+
+    def _put(self, path: str, body: Any = None) -> Any:
+        res = self._request("PUT", path, json=body)
         return _normalise(self._parse(res))
 
     def _delete(self, path: str) -> None:
@@ -228,6 +235,7 @@ class AsyncForm4ApiClient:
         self.filings = GeneratedAsyncFilingsResource(self)
         self.form144 = GeneratedAsyncForm144Resource(self)
         self.holdings = GeneratedAsyncHoldingsResource(self)
+        self.ownership = GeneratedAsyncOwnershipResource(self)
         self.stats = GeneratedAsyncStatsResource(self)
         self.status = GeneratedAsyncStatusResource(self)
         self.data_quality = GeneratedAsyncDataQualityResource(self)
@@ -276,6 +284,10 @@ class AsyncForm4ApiClient:
 
     async def _post(self, path: str, body: Any = None) -> Any:
         res = await self._request("POST", path, json=body)
+        return _normalise(self._parse(res))
+
+    async def _put(self, path: str, body: Any = None) -> Any:
+        res = await self._request("PUT", path, json=body)
         return _normalise(self._parse(res))
 
     async def _delete(self, path: str) -> None:

@@ -2,6 +2,38 @@
 
 ## Unreleased
 
+## 0.10.0 — 2026-10-13
+
+- **Webhooks (sync and async).** New methods: `webhooks.enable(id)` (re-enable
+  a subscription the system auto-disabled), `webhooks.test(id)` (send one
+  synthetic delivery; a failed send comes back as `delivered=False` with an
+  `error`, it does not raise), `webhooks.set_auth_header(id, name, value)` and
+  `webhooks.delete_auth_header(id)` (returns `None` on 204). `webhooks.create()`
+  takes an optional `auth_header={"name": ..., "value": ...}` that is sent with
+  every delivery. `WebhookSubscription` gains `is_read_only`, `disabled_at`,
+  `disabled_reason`, `last_attempt_at`, `last_success_at`, `last_status_code`,
+  `last_error_class` and `auth_header_name`; `WebhookCreated` gains
+  `is_read_only` and `auth_header_name`. All default to `None`. The auth header
+  value is write-only and never returned.
+- **Schedule 13D/13G.** New `client.ownership.schedule_13dg()` for
+  `GET /v1/ownership/13d-13g` (Business plan), sync and async. The endpoint
+  existed in the API but had no method because the `Ownership` tag was missing
+  from the generator.
+- **`transactions.list()` / `paginate()` filters (sync and async).** Added
+  `min_return_1d/1w/1m/3m/6m`, `max_return_1d/1w/1m/3m/6m`, `has_returns` (all
+  Pro+), `inst_ownership_trend` (`"increasing"`, `"decreasing"` or `"stable"`),
+  `role` (`"officer"`, `"director"` or `"ten_percent_owner"`) and `sort`
+  (`"date"` or `"value"`). Returns are fractions (0.2 = +20%).
+- `Transaction` gains `filed_at` (when the filing became public on EDGAR).
+- `verify_webhook()` now returns `False` instead of raising `TypeError` when the
+  signature header is missing or contains non-ASCII characters.
+- README: documented `verify_webhook`, the webhook methods and all five event
+  types, fixed `client.status.history()` (it takes no parameters), and fixed the
+  `min_value` note (available on every plan; `max_value`, `min_shares`,
+  `max_shares` and the return filters are Pro+).
+- Regenerated `form4api/_generated.py` from the live spec (new
+  `GeneratedOwnershipResource`, `WebhookAuthHeaderRequest`, `filed_at` on
+  `TransactionResponse`; some endpoint descriptions updated).
 - Added `form4api.__version__` (read from the installed package metadata, so it
   always equals the pyproject version).
 - Responses with fields added by newer API versions no longer raise

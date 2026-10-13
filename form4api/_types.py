@@ -87,6 +87,8 @@ class Transaction:
     accepted_at: str | None = None
     document_url: str | None = None
     institutional_ownership: InstitutionalOwnership | None = None
+    # Added 0.10.0: when the filing became public on EDGAR (Filing.FiledAt).
+    filed_at: str | None = None
 
     @classmethod
     def _from_dict(cls, data: dict) -> "Transaction":
@@ -188,6 +190,10 @@ class WebhookCreated(_FromDictMixin):
     secret: str
     created_at: str
     warning: str | None
+    # Added 0.10.0. Free-plan subscriptions are flagged read-only (informational;
+    # events are still delivered). The auth header VALUE is never returned.
+    is_read_only: bool | None = None
+    auth_header_name: str | None = None
 
 
 @dataclass
@@ -197,6 +203,43 @@ class WebhookSubscription(_FromDictMixin):
     event_types: list[str]
     created_at: str
     is_active: bool
+    # Added 0.10.0, all nullable. disabled_reason is "delivery_failures" when the
+    # system auto-disabled the subscription (undo with webhooks.enable()).
+    # last_error_class is one of HTTP_4XX, HTTP_5XX, HTTP_OTHER, TIMEOUT, DNS,
+    # TLS, CONNECT_REFUSED, URL_REJECTED, CIRCUIT_OPEN, OTHER.
+    is_read_only: bool | None = None
+    disabled_at: str | None = None
+    disabled_reason: str | None = None
+    last_attempt_at: str | None = None
+    last_success_at: str | None = None
+    last_status_code: int | None = None
+    last_error_class: str | None = None
+    auth_header_name: str | None = None
+
+
+@dataclass
+class WebhookEnableResult(_FromDictMixin):
+    subscription_id: int
+    is_active: bool
+
+
+@dataclass
+class WebhookTestResult(_FromDictMixin):
+    """Result of a synthetic test delivery. A failed send is reported here
+    (`delivered=False`, `error` set), not raised. `error` is None on a normal
+    send, otherwise INSECURE_URL, PRIVATE_ADDRESS, UNRESOLVABLE_HOST or
+    NETWORK_ERROR; `status_code` is 0 when no response was received."""
+
+    delivered: bool
+    status_code: int
+    duration_ms: int
+    error: str | None = None
+
+
+@dataclass
+class WebhookAuthHeaderResult(_FromDictMixin):
+    subscription_id: int
+    auth_header_name: str
 
 
 @dataclass

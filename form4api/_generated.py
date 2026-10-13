@@ -387,6 +387,7 @@ class CreateKeyRequest:
 
 @dataclass
 class CreateWebhookRequest:
+    auth_header: WebhookAuthHeaderRequest | None = None
     event_types: list[str] | None = None
     url: str | None = None
 
@@ -398,7 +399,10 @@ class CreateWebhookRequest:
         means the SDK raises TypeError the moment the backend adds a field.
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
-        return cls(**{k: v for k, v in data.items() if k in known})
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("auth_header"), dict):
+            kwargs["auth_header"] = WebhookAuthHeaderRequest._from_dict(kwargs["auth_header"])
+        return cls(**kwargs)
 
 
 @dataclass
@@ -1332,6 +1336,7 @@ class TransactionResponse:
     company_name: str | None = None
     direct_indirect: str | None = None
     document_url: str | None = None
+    filed_at: str | None = None
     insider_cik: str | None = None
     insider_name: str | None = None
     insider_title: str | None = None
@@ -1419,6 +1424,40 @@ class WaitlistRequest:
 
     @classmethod
     def _from_dict(cls, data: dict) -> "WaitlistRequest":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class WebhookAuthHeaderRequest:
+    """Optional. One custom HTTP header sent with every delivery to this subscription, e.g. { "name": "Authorization", "value": "Bearer ..." } for a receiver that rejects unauthenticated requests. Invalid or reserved names are rejected with 400 INVALID_AUTH_HEADER. The value is never returned by any endpoint."""
+
+    name: str | None = None
+    value: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "WebhookAuthHeaderRequest":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class WebhookAuthHeaderRequest2:
+    name: str | None = None
+    value: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "WebhookAuthHeaderRequest2":
         """Build from an API payload, ignoring unknown keys.
 
         Constructing with **data directly (as the hand-written resources do)
@@ -1751,7 +1790,7 @@ class GeneratedHoldingsResource:
     def list(self, *, ticker: str | None = None, cusip: str | None = None, manager_cik: str | None = None, quarter: str | None = None, min_value: float | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[HoldingResponse]:
         """List institutional holdings from Form 13F-HR (Business plan+)
 
-        Returns a paginated list of individual position rows from Form 13F-HR institutional holdings reports (quarterly disclosures by managers with $100M+ AUM), most recent report period and highest value first. Each row includes the manager name/CIK, report period, issuer name/ticker, CUSIP, security class, position value and share count, share/voting authority type, and the source filing's accession number and filed date. A single security can appear multiple times per manager when sub-managers each report it separately (e.g. Berkshire's subsidiaries). Use GET /v1/managers instead when you want one row per manager (their latest filing + total AUM) rather than position-level detail. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching; 13F data itself is inherently quarter-lagged (SEC filing deadline is 45 days after quarter end)."""
+        Returns a paginated list of individual position rows from Form 13F-HR institutional holdings reports (quarterly disclosures by managers with $100M+ AUM), most recent report period and highest value first. Each row includes the manager name/CIK, report period, issuer name/ticker, CUSIP, security class, position value and share count, share/voting authority type, and the source filing's accession number and filed date. Per manager and report period only the lines of the filings that currently count are returned: the newest original or RESTATEMENT 13F-HR/A, plus every NEW HOLDINGS amendment filed after it (those hold only the added lines); superseded originals and amendments are not returned, so an original and its restatement are never both present. Amendments whose type is not recorded are treated as additions when they report fewer than half the entries of that base filing. A single security can appear multiple times per manager when sub-managers each report it separately (e.g. Berkshire's subsidiaries). Use GET /v1/managers instead when you want one row per manager (their latest filing + total AUM) rather than position-level detail. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching; 13F data itself is inherently quarter-lagged (SEC filing deadline is 45 days after quarter end)."""
         params = {
             "ticker": ticker,
             "cusip": cusip,
@@ -1769,7 +1808,7 @@ class GeneratedHoldingsResource:
     def managers(self, *, name: str | None = None, min_aum: float | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[ManagerResponse]:
         """List institutional managers with their latest 13F-HR (Business plan+)
 
-        Returns one row per institutional manager (13F filer), summarising their MOST RECENT 13F-HR filing — manager name/CIK, report period, total reported position value (AUM) and entry count, filed date, and accession number — ranked by AUM descending. Use this for manager-level discovery ("who are the biggest 13F filers?", "rank Apple's institutional holders") before drilling into position detail via GET /v1/holdings?manager_cik=. Amended (IsAmendment=true) filings are excluded from the 'latest' pick. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching; 13F data is inherently quarter-lagged (SEC deadline is 45 days after quarter end)."""
+        Returns one row per institutional manager (13F filer), summarising their MOST RECENT 13F-HR filing — manager name/CIK, report period, total reported position value (AUM) and entry count, filed date, and accession number — ranked by AUM descending. Use this for manager-level discovery ("who are the biggest 13F filers?", "rank Apple's institutional holders") before drilling into position detail via GET /v1/holdings?manager_cik=. The 'latest' pick is the newest original or RESTATEMENT 13F-HR/A for the manager's latest report period; amendments of type NEW HOLDINGS (which only add lines) are not picked, nor are amendments whose type is not recorded and which report fewer than half the entries of that base filing; the reported totals are those of the picked filing alone. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching; 13F data is inherently quarter-lagged (SEC deadline is 45 days after quarter end)."""
         params = {
             "name": name,
             "min_aum": min_aum,
@@ -1789,7 +1828,7 @@ class GeneratedAsyncHoldingsResource:
     async def list(self, *, ticker: str | None = None, cusip: str | None = None, manager_cik: str | None = None, quarter: str | None = None, min_value: float | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[HoldingResponse]:
         """List institutional holdings from Form 13F-HR (Business plan+)
 
-        Returns a paginated list of individual position rows from Form 13F-HR institutional holdings reports (quarterly disclosures by managers with $100M+ AUM), most recent report period and highest value first. Each row includes the manager name/CIK, report period, issuer name/ticker, CUSIP, security class, position value and share count, share/voting authority type, and the source filing's accession number and filed date. A single security can appear multiple times per manager when sub-managers each report it separately (e.g. Berkshire's subsidiaries). Use GET /v1/managers instead when you want one row per manager (their latest filing + total AUM) rather than position-level detail. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching; 13F data itself is inherently quarter-lagged (SEC filing deadline is 45 days after quarter end)."""
+        Returns a paginated list of individual position rows from Form 13F-HR institutional holdings reports (quarterly disclosures by managers with $100M+ AUM), most recent report period and highest value first. Each row includes the manager name/CIK, report period, issuer name/ticker, CUSIP, security class, position value and share count, share/voting authority type, and the source filing's accession number and filed date. Per manager and report period only the lines of the filings that currently count are returned: the newest original or RESTATEMENT 13F-HR/A, plus every NEW HOLDINGS amendment filed after it (those hold only the added lines); superseded originals and amendments are not returned, so an original and its restatement are never both present. Amendments whose type is not recorded are treated as additions when they report fewer than half the entries of that base filing. A single security can appear multiple times per manager when sub-managers each report it separately (e.g. Berkshire's subsidiaries). Use GET /v1/managers instead when you want one row per manager (their latest filing + total AUM) rather than position-level detail. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching; 13F data itself is inherently quarter-lagged (SEC filing deadline is 45 days after quarter end)."""
         params = {
             "ticker": ticker,
             "cusip": cusip,
@@ -1807,7 +1846,7 @@ class GeneratedAsyncHoldingsResource:
     async def managers(self, *, name: str | None = None, min_aum: float | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[ManagerResponse]:
         """List institutional managers with their latest 13F-HR (Business plan+)
 
-        Returns one row per institutional manager (13F filer), summarising their MOST RECENT 13F-HR filing — manager name/CIK, report period, total reported position value (AUM) and entry count, filed date, and accession number — ranked by AUM descending. Use this for manager-level discovery ("who are the biggest 13F filers?", "rank Apple's institutional holders") before drilling into position detail via GET /v1/holdings?manager_cik=. Amended (IsAmendment=true) filings are excluded from the 'latest' pick. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching; 13F data is inherently quarter-lagged (SEC deadline is 45 days after quarter end)."""
+        Returns one row per institutional manager (13F filer), summarising their MOST RECENT 13F-HR filing — manager name/CIK, report period, total reported position value (AUM) and entry count, filed date, and accession number — ranked by AUM descending. Use this for manager-level discovery ("who are the biggest 13F filers?", "rank Apple's institutional holders") before drilling into position detail via GET /v1/holdings?manager_cik=. The 'latest' pick is the newest original or RESTATEMENT 13F-HR/A for the manager's latest report period; amendments of type NEW HOLDINGS (which only add lines) are not picked, nor are amendments whose type is not recorded and which report fewer than half the entries of that base filing; the reported totals are those of the picked filing alone. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching; 13F data is inherently quarter-lagged (SEC deadline is 45 days after quarter end)."""
         params = {
             "name": name,
             "min_aum": min_aum,
@@ -2032,6 +2071,48 @@ AvgReturn1w, etc.) are stored as FRACTIONS — 0.05 means +5%."""
         return InsiderSummaryResponse._from_dict(data)
 
 
+class GeneratedOwnershipResource:
+    def __init__(self, client) -> None:
+        self._client = client
+
+    def schedule_13dg(self, *, ticker: str | None = None, form_type: str | None = None, is_amendment: bool | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[Schedule13DGResponse]:
+        """List Schedule 13D/13G >5% beneficial-ownership crossings (Business plan+)
+
+        Returns every parsed >5% beneficial-ownership crossing event for a company — filer/reporting person, ownership percent, event date, form type (13D or 13G), and amendment status — parsed from EDGAR's structured Schedule 13D/13G cover-page XML (mandatory since the SEC's 2023 rule, compliance date 2024-12-18). SC 13D indicates an "active" investor who may seek control or influence over the issuer and must file within five business days of crossing the threshold (shortened from 10 days by the SEC's 2023 rule amendments, effective 2024-02-05); SC 13G is a lighter, less frequent filing for "passive"/qualified investors (e.g. index funds), with its own accelerated deadlines effective 2024-09-30. A single accession can carry several rows when the filing is a joint filing (e.g. a fund, its general partner, and the individual who controls both) — each reporting person has its own ownership percent. Results exclude rows superseded by a later SC 13D/A or SC 13G/A amendment; the isAmendment field on a returned row indicates whether that row is itself an amendment, not whether it has since been superseded. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching."""
+        params = {
+            "ticker": ticker,
+            "form_type": form_type,
+            "is_amendment": is_amendment,
+            "page": page,
+            "per_page": per_page,
+            "limit": limit,
+        }
+        params = {k: str(v) for k, v in params.items() if v is not None}
+        data = self._client._get(f"/v1/ownership/13d-13g", params=params)
+        return [Schedule13DGResponse._from_dict(item) for item in data]
+
+
+class GeneratedAsyncOwnershipResource:
+    def __init__(self, client) -> None:
+        self._client = client
+
+    async def schedule_13dg(self, *, ticker: str | None = None, form_type: str | None = None, is_amendment: bool | None = None, page: int | None = None, per_page: int | None = None, limit: int | None = None) -> list[Schedule13DGResponse]:
+        """List Schedule 13D/13G >5% beneficial-ownership crossings (Business plan+)
+
+        Returns every parsed >5% beneficial-ownership crossing event for a company — filer/reporting person, ownership percent, event date, form type (13D or 13G), and amendment status — parsed from EDGAR's structured Schedule 13D/13G cover-page XML (mandatory since the SEC's 2023 rule, compliance date 2024-12-18). SC 13D indicates an "active" investor who may seek control or influence over the issuer and must file within five business days of crossing the threshold (shortened from 10 days by the SEC's 2023 rule amendments, effective 2024-02-05); SC 13G is a lighter, less frequent filing for "passive"/qualified investors (e.g. index funds), with its own accelerated deadlines effective 2024-09-30. A single accession can carry several rows when the filing is a joint filing (e.g. a fund, its general partner, and the individual who controls both) — each reporting person has its own ownership percent. Results exclude rows superseded by a later SC 13D/A or SC 13G/A amendment; the isAmendment field on a returned row indicates whether that row is itself an amendment, not whether it has since been superseded. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). `limit` is accepted as an alias for `per_page`. Query runs live against the database — no caching."""
+        params = {
+            "ticker": ticker,
+            "form_type": form_type,
+            "is_amendment": is_amendment,
+            "page": page,
+            "per_page": per_page,
+            "limit": limit,
+        }
+        params = {k: str(v) for k, v in params.items() if v is not None}
+        data = await self._client._get(f"/v1/ownership/13d-13g", params=params)
+        return [Schedule13DGResponse._from_dict(item) for item in data]
+
+
 class GeneratedSignalsResource:
     def __init__(self, client) -> None:
         self._client = client
@@ -2055,7 +2136,7 @@ class GeneratedSignalsResource:
     def explain(self, ticker: str, *, date: str | None = None) -> SignalExplanation:
         """Explain why a signal fired: the insiders and trades counted, what was excluded, and the criteria (Business plan+)
 
-        Use this when the question is WHY a named company's signal fired, or WHICH insiders and trades made up its cluster. It takes the ticker directly, so there is no need to call GET /v1/signals first; that endpoint is for finding which companies have signals. Reconstructs the full evidence behind one company's insider signal from GET /v1/signals: the detection criteria (5-day cluster window, 3-insider threshold, 90-day ratio window, 10b5-1 exclusion), the list of cluster buyers and sellers (each with their role and individual trades in the window), trades that were excluded from the cluster count and why (10b5-1 plan or superseded by amendment), and the raw buy/sell share totals behind the 90-day ratio. Use this to audit or debug a specific signal rather than to scan many companies (use GET /v1/signals for that). This is a LIVE reconstruction from current non-superseded data, computed on every request (no caching) — it can differ slightly from the originally stored signal if trades were amended afterward. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). Returns 404 COMPANY_NOT_FOUND if the ticker isn't tracked, 404 SIGNAL_NOT_FOUND if no signal exists for the given/most-recent date, or 400 INVALID_DATE if `date` isn't YYYY-MM-DD."""
+        Use this when the question is WHY a named company's signal fired, or WHICH insiders and trades made up its cluster. It takes the ticker directly, so there is no need to call GET /v1/signals first; that endpoint is for finding which companies have signals. Reconstructs the full evidence behind one company's insider signal from GET /v1/signals: the detection criteria (5-day cluster window, 3-insider threshold, 90-day ratio window, 10b5-1 and derivative-row exclusion), the list of cluster buyers and sellers (each with their role and individual trades in the window), trades that were excluded from the cluster count and why (10b5-1 plan, derivative security, or superseded by amendment), and the raw buy/sell share totals behind the 90-day ratio. Use this to audit or debug a specific signal rather than to scan many companies (use GET /v1/signals for that). This is a LIVE reconstruction from current non-superseded data, computed on every request (no caching) — it can differ slightly from the originally stored signal if trades were amended afterward. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). Returns 404 COMPANY_NOT_FOUND if the ticker isn't tracked, 404 SIGNAL_NOT_FOUND if no signal exists for the given/most-recent date, or 400 INVALID_DATE if `date` isn't YYYY-MM-DD."""
         params = {
             "date": date,
         }
@@ -2098,7 +2179,7 @@ class GeneratedAsyncSignalsResource:
     async def explain(self, ticker: str, *, date: str | None = None) -> SignalExplanation:
         """Explain why a signal fired: the insiders and trades counted, what was excluded, and the criteria (Business plan+)
 
-        Use this when the question is WHY a named company's signal fired, or WHICH insiders and trades made up its cluster. It takes the ticker directly, so there is no need to call GET /v1/signals first; that endpoint is for finding which companies have signals. Reconstructs the full evidence behind one company's insider signal from GET /v1/signals: the detection criteria (5-day cluster window, 3-insider threshold, 90-day ratio window, 10b5-1 exclusion), the list of cluster buyers and sellers (each with their role and individual trades in the window), trades that were excluded from the cluster count and why (10b5-1 plan or superseded by amendment), and the raw buy/sell share totals behind the 90-day ratio. Use this to audit or debug a specific signal rather than to scan many companies (use GET /v1/signals for that). This is a LIVE reconstruction from current non-superseded data, computed on every request (no caching) — it can differ slightly from the originally stored signal if trades were amended afterward. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). Returns 404 COMPANY_NOT_FOUND if the ticker isn't tracked, 404 SIGNAL_NOT_FOUND if no signal exists for the given/most-recent date, or 400 INVALID_DATE if `date` isn't YYYY-MM-DD."""
+        Use this when the question is WHY a named company's signal fired, or WHICH insiders and trades made up its cluster. It takes the ticker directly, so there is no need to call GET /v1/signals first; that endpoint is for finding which companies have signals. Reconstructs the full evidence behind one company's insider signal from GET /v1/signals: the detection criteria (5-day cluster window, 3-insider threshold, 90-day ratio window, 10b5-1 and derivative-row exclusion), the list of cluster buyers and sellers (each with their role and individual trades in the window), trades that were excluded from the cluster count and why (10b5-1 plan, derivative security, or superseded by amendment), and the raw buy/sell share totals behind the 90-day ratio. Use this to audit or debug a specific signal rather than to scan many companies (use GET /v1/signals for that). This is a LIVE reconstruction from current non-superseded data, computed on every request (no caching) — it can differ slightly from the originally stored signal if trades were amended afterward. Requires Business plan or higher (402 PLAN_REQUIRED on Free/Starter/Pro). Returns 404 COMPANY_NOT_FOUND if the ticker isn't tracked, 404 SIGNAL_NOT_FOUND if no signal exists for the given/most-recent date, or 400 INVALID_DATE if `date` isn't YYYY-MM-DD."""
         params = {
             "date": date,
         }
