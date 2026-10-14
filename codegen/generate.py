@@ -119,6 +119,7 @@ TAG_TO_RESOURCE = {
 # breaking rename the day an operationId changes upstream.
 METHOD_NAME_OVERRIDES = {
     "ListCompanies": "list",
+    "GetCompanyPeers": "peers",
     "ListCongressTrades": "trades",
     "ListCongressPoliticians": "politicians",
     "GetCongressPolitician": "politician",

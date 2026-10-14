@@ -33,6 +33,11 @@ company = client.companies.get("MSFT")
 print(company.name, company.active_insiders, "active insiders")
 print(company.sic_description, company.state_of_incorporation)
 
+# Similar companies in the same industry, ranked by Form 4 filings in the last 12 months
+peers = client.companies.peers("MSFT", limit=5)
+for p in peers.peers:
+    print(p.ticker, p.name, p.filings12m, p.match_level)  # peers.basis: sic4 | sic2 | mixed | none
+
 # Insider detail
 insider = client.insiders.get("0001234567")
 print(insider.name, insider.officer_title)
@@ -65,7 +70,7 @@ asyncio.run(main())
 | `client.search(q, limit=None)` | Combined company + insider lookup — not namespaced under a resource |
 | `client.transactions` | `.list(**params)`, `.paginate(**params)` |
 | `client.insiders` | `.search(name, **params)`, `.get(cik)`, `.list(**params)`, `.directory(**params)`, `.transactions(cik, **params)`, `.summary(cik)` *(Pro)*, `.scorecard(cik)` *(Pro)*, `.leaderboard(**params)` *(Business)* |
-| `client.companies` | `.get(ticker)`, `.insiders(ticker)`, `.list(**params)` |
+| `client.companies` | `.get(ticker)`, `.insiders(ticker)`, `.peers(ticker, limit=None)`, `.list(**params)` |
 | `client.signals` | `.list(**params)`, `.paginate(**params)`, `.explain(ticker)`, `.sentiment(ticker, **params)` — Business; `.convergence(**params)` — Pro |
 | `client.congress` | `.trades(**params)`, `.politicians(**params)` *(Pro)*, `.politician(id_or_slug)` *(Pro)*, `.ticker(ticker)` *(Pro)* |
 | `client.form144` | `.list(**params)` — Business plan |

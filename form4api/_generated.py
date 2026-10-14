@@ -69,6 +69,48 @@ class ClusterTradeEntry:
 
 
 @dataclass
+class CompanyPeerResponse:
+    cik: str | None = None
+    filings12m: int | None = None
+    match_level: str | None = None
+    name: str | None = None
+    sic_code: str | None = None
+    ticker: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "CompanyPeerResponse":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class CompanyPeersResponse:
+    basis: str | None = None
+    peers: list[CompanyPeerResponse] | None = None
+    sic_code: str | None = None
+    sic_description: str | None = None
+    ticker: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "CompanyPeersResponse":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("peers"), list):
+            kwargs["peers"] = [CompanyPeerResponse._from_dict(i) if isinstance(i, dict) else i for i in kwargs["peers"]]
+        return cls(**kwargs)
+
+
+@dataclass
 class CompanyResponse:
     active_insiders: int | None = None
     cik: str | None = None
@@ -1498,6 +1540,17 @@ class GeneratedCompaniesResource:
         data = self._client._get(f"/v1/companies", params=params)
         return [CompanyResponse._from_dict(item) for item in data]
 
+    def peers(self, ticker: str, *, limit: int | None = None) -> CompanyPeersResponse:
+        """Peer companies in the same SIC industry, ranked by recent Form 4 activity
+
+        Returns other tracked companies in the same industry as the given ticker, for "similar companies" links. Candidates share the company's 4-digit SIC code (matchLevel "sic4"); when too few of those have Form 4 filings in the last 12 months to fill `limit`, companies sharing only the 2-digit SIC prefix (matchLevel "sic2") are added. Active peers (at least one Form 4 filing dated in the trailing 12 months, `filings12m`) come first, sic4 before sic2, each tier ordered by `filings12m` descending then ticker ascending; peers with no filings in the window are appended last only if there is still room. The company itself is excluded, as are companies without a ticker or without a usable SIC code. `basis` is "sic4", "sic2" or "mixed" according to the match levels present in `peers`, and "none" when `peers` is empty (including when the company has no SIC code, which is 200 with an empty list, not 404). `limit` defaults to 10 and is clamped to 1-25. Returns 404 NOT_FOUND if the ticker isn't tracked. Not plan-gated. Results are cached for a few hours."""
+        params = {
+            "limit": limit,
+        }
+        params = {k: str(v) for k, v in params.items() if v is not None}
+        data = self._client._get(f"/v1/companies/{ticker}/peers", params=params)
+        return CompanyPeersResponse._from_dict(data)
+
 
 class GeneratedAsyncCompaniesResource:
     def __init__(self, client) -> None:
@@ -1514,6 +1567,17 @@ class GeneratedAsyncCompaniesResource:
         params = {k: str(v) for k, v in params.items() if v is not None}
         data = await self._client._get(f"/v1/companies", params=params)
         return [CompanyResponse._from_dict(item) for item in data]
+
+    async def peers(self, ticker: str, *, limit: int | None = None) -> CompanyPeersResponse:
+        """Peer companies in the same SIC industry, ranked by recent Form 4 activity
+
+        Returns other tracked companies in the same industry as the given ticker, for "similar companies" links. Candidates share the company's 4-digit SIC code (matchLevel "sic4"); when too few of those have Form 4 filings in the last 12 months to fill `limit`, companies sharing only the 2-digit SIC prefix (matchLevel "sic2") are added. Active peers (at least one Form 4 filing dated in the trailing 12 months, `filings12m`) come first, sic4 before sic2, each tier ordered by `filings12m` descending then ticker ascending; peers with no filings in the window are appended last only if there is still room. The company itself is excluded, as are companies without a ticker or without a usable SIC code. `basis` is "sic4", "sic2" or "mixed" according to the match levels present in `peers`, and "none" when `peers` is empty (including when the company has no SIC code, which is 200 with an empty list, not 404). `limit` defaults to 10 and is clamped to 1-25. Returns 404 NOT_FOUND if the ticker isn't tracked. Not plan-gated. Results are cached for a few hours."""
+        params = {
+            "limit": limit,
+        }
+        params = {k: str(v) for k, v in params.items() if v is not None}
+        data = await self._client._get(f"/v1/companies/{ticker}/peers", params=params)
+        return CompanyPeersResponse._from_dict(data)
 
 
 class GeneratedCongressResource:
