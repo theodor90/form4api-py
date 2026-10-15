@@ -970,6 +970,7 @@ class InsiderTxCodeBreakdown:
     other: int | None = None
     p: int | None = None
     s: int | None = None
+    s_with_value: int | None = None
 
     @classmethod
     def _from_dict(cls, data: dict) -> "InsiderTxCodeBreakdown":
@@ -2033,8 +2034,12 @@ as FRACTIONS — 0.05 means +5%, -0.10 means -10%."""
 
         Aggregate career roll-up for a single insider: first/last transaction dates, total transactions,
 total bought/sold/net USD, transaction-code breakdown (P/S/F/M/A/G/other counts), the top 10
-companies traded (by activity), the 10b5-1 vs discretionary split, and average post-trade returns
-across discretionary open-market (non-10b5-1) buy/sell trades. Use this for a one-call career
+companies traded (by activity), the 10b5-1 vs discretionary split, and post-trade returns
+across discretionary open-market (non-10b5-1) buy/sell trades. The S count includes every
+sale; SWithValue counts only the sales that contribute to TotalSoldUsd (trusted value, price
+and shares above zero), so S minus SWithValue is the number of sales the dollar total omits.
+Despite their AvgReturn names, the return fields are the MEDIAN across those trades, and
+trades with an entry close below $0.01 carry no return, and a horizon is null when a one-day close change of 10x or more (typically a split) falls inside its window. Use this for a one-call career
 overview rather than paging through GET /v1/insiders/{cik}/transactions yourself; for a scored
 hit-rate track record on buys specifically, use GET /v1/insiders/{cik}/scorecard instead.
 Requires Pro plan or higher (402 PLAN_REQUIRED on Free/Starter). Returns 404 NOT_FOUND if the CIK
@@ -2139,8 +2144,12 @@ as FRACTIONS — 0.05 means +5%, -0.10 means -10%."""
 
         Aggregate career roll-up for a single insider: first/last transaction dates, total transactions,
 total bought/sold/net USD, transaction-code breakdown (P/S/F/M/A/G/other counts), the top 10
-companies traded (by activity), the 10b5-1 vs discretionary split, and average post-trade returns
-across discretionary open-market (non-10b5-1) buy/sell trades. Use this for a one-call career
+companies traded (by activity), the 10b5-1 vs discretionary split, and post-trade returns
+across discretionary open-market (non-10b5-1) buy/sell trades. The S count includes every
+sale; SWithValue counts only the sales that contribute to TotalSoldUsd (trusted value, price
+and shares above zero), so S minus SWithValue is the number of sales the dollar total omits.
+Despite their AvgReturn names, the return fields are the MEDIAN across those trades, and
+trades with an entry close below $0.01 carry no return, and a horizon is null when a one-day close change of 10x or more (typically a split) falls inside its window. Use this for a one-call career
 overview rather than paging through GET /v1/insiders/{cik}/transactions yourself; for a scored
 hit-rate track record on buys specifically, use GET /v1/insiders/{cik}/scorecard instead.
 Requires Pro plan or higher (402 PLAN_REQUIRED on Free/Starter). Returns 404 NOT_FOUND if the CIK
