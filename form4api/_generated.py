@@ -14,6 +14,48 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 
 @dataclass
+class AddWatchlistItemsRequest:
+    items: list[WatchlistItemInput] | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "AddWatchlistItemsRequest":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("items"), list):
+            kwargs["items"] = [WatchlistItemInput._from_dict(i) if isinstance(i, dict) else i for i in kwargs["items"]]
+        return cls(**kwargs)
+
+
+@dataclass
+class AddWatchlistItemsResponse:
+    added: list[WatchlistItemDto] | None = None
+    skipped: list[WatchlistSkippedItemDto] | None = None
+    usage: WatchlistUsageDto | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "AddWatchlistItemsResponse":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("added"), list):
+            kwargs["added"] = [WatchlistItemDto._from_dict(i) if isinstance(i, dict) else i for i in kwargs["added"]]
+        if isinstance(kwargs.get("skipped"), list):
+            kwargs["skipped"] = [WatchlistSkippedItemDto._from_dict(i) if isinstance(i, dict) else i for i in kwargs["skipped"]]
+        if isinstance(kwargs.get("usage"), dict):
+            kwargs["usage"] = WatchlistUsageDto._from_dict(kwargs["usage"])
+        return cls(**kwargs)
+
+
+@dataclass
 class AmendmentMetrics:
     superseded_transactions: int | None = None
 
@@ -131,6 +173,35 @@ class CompanyResponse:
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
         return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class CompanyReturnsSummaryResponse:
+    as_of: str | None = None
+    baseline: ReturnsSummaryBaseline | None = None
+    buys: ReturnsSummaryBlock | None = None
+    low_price: bool | None = None
+    methodology: str | None = None
+    sells: ReturnsSummaryBlock | None = None
+    suppressed: bool | None = None
+    ticker: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "CompanyReturnsSummaryResponse":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("baseline"), dict):
+            kwargs["baseline"] = ReturnsSummaryBaseline._from_dict(kwargs["baseline"])
+        if isinstance(kwargs.get("buys"), dict):
+            kwargs["buys"] = ReturnsSummaryBlock._from_dict(kwargs["buys"])
+        if isinstance(kwargs.get("sells"), dict):
+            kwargs["sells"] = ReturnsSummaryBlock._from_dict(kwargs["sells"])
+        return cls(**kwargs)
 
 
 @dataclass
@@ -299,6 +370,35 @@ class CongressTradeDto:
 
 
 @dataclass
+class CongressTradeDto2:
+    amount_high: float | None = None
+    amount_low: float | None = None
+    asset_name: str | None = None
+    asset_type: str | None = None
+    date_quality: str | None = None
+    disclosure_date: str | None = None
+    disclosure_lag_days: int | None = None
+    owner_type: str | None = None
+    politician: CongressPoliticianRefDto | None = None
+    ticker: str | None = None
+    transaction_date: str | None = None
+    transaction_type: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "CongressTradeDto2":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("politician"), dict):
+            kwargs["politician"] = CongressPoliticianRefDto._from_dict(kwargs["politician"])
+        return cls(**kwargs)
+
+
+@dataclass
 class ConvergenceCongressLegDto:
     amount_high: float | None = None
     amount_low: float | None = None
@@ -425,6 +525,46 @@ class CreateKeyRequest:
         Filtering keeps older SDK versions working against a newer API."""
         known = {f.name for f in fields(cls)}
         return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class CreateWatchlistRequest:
+    items: list[WatchlistItemInput] | None = None
+    name: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "CreateWatchlistRequest":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("items"), list):
+            kwargs["items"] = [WatchlistItemInput._from_dict(i) if isinstance(i, dict) else i for i in kwargs["items"]]
+        return cls(**kwargs)
+
+
+@dataclass
+class CreateWatchlistResponse:
+    usage: WatchlistUsageDto | None = None
+    watchlist: WatchlistDetailDto | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "CreateWatchlistResponse":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("usage"), dict):
+            kwargs["usage"] = WatchlistUsageDto._from_dict(kwargs["usage"])
+        if isinstance(kwargs.get("watchlist"), dict):
+            kwargs["watchlist"] = WatchlistDetailDto._from_dict(kwargs["watchlist"])
+        return cls(**kwargs)
 
 
 @dataclass
@@ -970,6 +1110,7 @@ class InsiderTxCodeBreakdown:
     other: int | None = None
     p: int | None = None
     s: int | None = None
+    s_with_value: int | None = None
 
     @classmethod
     def _from_dict(cls, data: dict) -> "InsiderTxCodeBreakdown":
@@ -1099,6 +1240,21 @@ class RatioBasis:
 
 
 @dataclass
+class RenameWatchlistRequest:
+    name: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "RenameWatchlistRequest":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
 class ReturnsCoverage:
     coverage_pct: float | None = None
     eligible_transactions: int | None = None
@@ -1106,6 +1262,101 @@ class ReturnsCoverage:
 
     @classmethod
     def _from_dict(cls, data: dict) -> "ReturnsCoverage":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class ReturnsSummaryBaseline:
+    buys: ReturnsSummaryBaselineBlock | None = None
+    sells: ReturnsSummaryBaselineBlock | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "ReturnsSummaryBaseline":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("buys"), dict):
+            kwargs["buys"] = ReturnsSummaryBaselineBlock._from_dict(kwargs["buys"])
+        if isinstance(kwargs.get("sells"), dict):
+            kwargs["sells"] = ReturnsSummaryBaselineBlock._from_dict(kwargs["sells"])
+        return cls(**kwargs)
+
+
+@dataclass
+class ReturnsSummaryBaselineBlock:
+    beat_market3m: float | None = None
+    excess_mean3m: float | None = None
+    excess_median3m: float | None = None
+    hit_rate3m: float | None = None
+    mean3m: float | None = None
+    median3m: float | None = None
+    n_events: int | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "ReturnsSummaryBaselineBlock":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class ReturnsSummaryBlock:
+    beat_market3m: float | None = None
+    events: list[ReturnsSummaryEvent] | None = None
+    excess_mean3m: float | None = None
+    excess_median1m: float | None = None
+    excess_median3m: float | None = None
+    excess_median6m: float | None = None
+    hit_rate3m: float | None = None
+    mean3m: float | None = None
+    median1m: float | None = None
+    median3m: float | None = None
+    median6m: float | None = None
+    n1m: int | None = None
+    n6m: int | None = None
+    n_events: int | None = None
+    n_excess1m: int | None = None
+    n_excess3m: int | None = None
+    n_excess6m: int | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "ReturnsSummaryBlock":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("events"), list):
+            kwargs["events"] = [ReturnsSummaryEvent._from_dict(i) if isinstance(i, dict) else i for i in kwargs["events"]]
+        return cls(**kwargs)
+
+
+@dataclass
+class ReturnsSummaryEvent:
+    excess3m: float | None = None
+    filed_at: str | None = None
+    return1m: float | None = None
+    return3m: float | None = None
+    return6m: float | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "ReturnsSummaryEvent":
         """Build from an API payload, ignoring unknown keys.
 
         Constructing with **data directly (as the hand-written resources do)
@@ -1315,8 +1566,10 @@ class SignalResponse:
     insider_count: int | None = None
     is_cluster_buy: bool | None = None
     is_cluster_sell: bool | None = None
+    preview: bool | None = None
     signal_date: str | None = None
     ticker: str | None = None
+    upgrade: str | None = None
 
     @classmethod
     def _from_dict(cls, data: dict) -> "SignalResponse":
@@ -1420,6 +1673,21 @@ class TransactionResponse:
 
 
 @dataclass
+class UpdateWatchlistItemRequest:
+    shares: float | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "UpdateWatchlistItemRequest":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
 class UpdateWebhookRequest:
     url: str | None = None
 
@@ -1491,6 +1759,219 @@ class WaitlistRequest:
 
 
 @dataclass
+class WatchlistActivityItemDto:
+    company_name: str | None = None
+    congress: CongressTradeDto2 | None = None
+    date: str | None = None
+    insider: WatchlistInsiderActivityDto | None = None
+    ticker: str | None = None
+    type: str | None = None
+    your_shares: float | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "WatchlistActivityItemDto":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("congress"), dict):
+            kwargs["congress"] = CongressTradeDto2._from_dict(kwargs["congress"])
+        if isinstance(kwargs.get("insider"), dict):
+            kwargs["insider"] = WatchlistInsiderActivityDto._from_dict(kwargs["insider"])
+        return cls(**kwargs)
+
+
+@dataclass
+class WatchlistActivityResponse:
+    congress_since: str | None = None
+    items: list[WatchlistActivityItemDto] | None = None
+    next_cursor: str | None = None
+    since: str | None = None
+    unresolved_tickers: list[str] | None = None
+    until: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "WatchlistActivityResponse":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("items"), list):
+            kwargs["items"] = [WatchlistActivityItemDto._from_dict(i) if isinstance(i, dict) else i for i in kwargs["items"]]
+        return cls(**kwargs)
+
+
+@dataclass
+class WatchlistDetailDto:
+    created_at: str | None = None
+    id_: int | None = None
+    items: list[WatchlistItemDto] | None = None
+    name: str | None = None
+    updated_at: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "WatchlistDetailDto":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("items"), list):
+            kwargs["items"] = [WatchlistItemDto._from_dict(i) if isinstance(i, dict) else i for i in kwargs["items"]]
+        return cls(**kwargs)
+
+
+@dataclass
+class WatchlistInsiderActivityDto:
+    accession_number: str | None = None
+    document_url: str | None = None
+    filed_at: str | None = None
+    holding_change_pct: float | None = None
+    insider_cik: str | None = None
+    insider_name: str | None = None
+    is_derivative: bool | None = None
+    is_director: bool | None = None
+    is_officer: bool | None = None
+    is_open_market: bool | None = None
+    is_ten_percent_owner: bool | None = None
+    planned: bool | None = None
+    price_per_share: float | None = None
+    role: str | None = None
+    shares_amount: float | None = None
+    shares_owned_after: float | None = None
+    side: str | None = None
+    total_value: float | None = None
+    transaction_code: str | None = None
+    transaction_date: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "WatchlistInsiderActivityDto":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class WatchlistItemDto:
+    added_at: str | None = None
+    kind: str | None = None
+    shares: float | None = None
+    ticker: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "WatchlistItemDto":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class WatchlistItemInput:
+    shares: float | None = None
+    ticker: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "WatchlistItemInput":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class WatchlistListResponse:
+    usage: WatchlistUsageDto | None = None
+    watchlists: list[WatchlistSummaryDto] | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "WatchlistListResponse":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        kwargs = {k: v for k, v in data.items() if k in known}
+        if isinstance(kwargs.get("usage"), dict):
+            kwargs["usage"] = WatchlistUsageDto._from_dict(kwargs["usage"])
+        if isinstance(kwargs.get("watchlists"), list):
+            kwargs["watchlists"] = [WatchlistSummaryDto._from_dict(i) if isinstance(i, dict) else i for i in kwargs["watchlists"]]
+        return cls(**kwargs)
+
+
+@dataclass
+class WatchlistSkippedItemDto:
+    reason: str | None = None
+    ticker: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "WatchlistSkippedItemDto":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class WatchlistSummaryDto:
+    created_at: str | None = None
+    id_: int | None = None
+    item_count: int | None = None
+    name: str | None = None
+    updated_at: str | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "WatchlistSummaryDto":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
+class WatchlistUsageDto:
+    list_limit: int | None = None
+    lists_used: int | None = None
+    ticker_limit: int | None = None
+    tickers_used: int | None = None
+
+    @classmethod
+    def _from_dict(cls, data: dict) -> "WatchlistUsageDto":
+        """Build from an API payload, ignoring unknown keys.
+
+        Constructing with **data directly (as the hand-written resources do)
+        means the SDK raises TypeError the moment the backend adds a field.
+        Filtering keeps older SDK versions working against a newer API."""
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in known})
+
+
+@dataclass
 class WebhookAuthHeaderRequest:
     """Optional. One custom HTTP header sent with every delivery to this subscription, e.g. { "name": "Authorization", "value": "Bearer ..." } for a receiver that rejects unauthenticated requests. Invalid or reserved names are rejected with 400 INVALID_AUTH_HEADER. The value is never returned by any endpoint."""
 
@@ -1528,6 +2009,13 @@ class GeneratedCompaniesResource:
     def __init__(self, client) -> None:
         self._client = client
 
+    def company_returns_summary(self, ticker: str) -> CompanyReturnsSummaryResponse:
+        """What happened after insiders traded at a company (Pro plan+)
+
+        Summarises price returns after insider open-market trades at one company, for buys and for discretionary sells, next to a site-wide baseline computed the same way. The unit is an event: one per company per filing date and side. An event's return at a horizon (1m, 3m, 6m = 21, 63, 126 trading days) is the average of that event's rows, measured from the filing-date close. Included: open-market purchases (P) and sales (S) that are not superseded, not derivative and carry no value-quality flag, filed since 2023-05-22; sells exclude 10b5-1 plan sales. An event counts toward a horizon only once that horizon has matured. `nEvents` is the number of events with a 3m return; `n1m` and `n6m` are the counts for the other horizons. Medians are null when that horizon has fewer than 10 events; `mean3m` and `hitRate3m` (share of events with a positive 3m return) are null when `nEvents` is below 10. `events` lists the individual events, newest first, only when `nEvents` is between 3 and 9, otherwise it is empty. `suppressed` is true when the median filing-date close across the company's buy and sell events is below $1, and `lowPrice` is true when that median is from $1 up to below $5; the price itself is not returned. Market comparison: each event's stock return is compared with the S&P 500 (SPY) return over the same window, from the stock's filing-date close bar to the stock's own bar at the horizon, matched by exact date; the event's excess return is the stock return minus the SPY return, computed only when both exist (events without an SPY return are left out, never filled in). `nExcess1m`, `nExcess3m` and `nExcess6m` count the events with an excess return per horizon; `excessMedian1m`, `excessMedian3m` and `excessMedian6m` are null when that count is below 10; `excessMean3m` and `beatMarket3m` (share of events whose 3m stock return exceeded SPY's) are null when `nExcess3m` is below 10. Each item in `events` carries `excess3m`. Not adjusted for company size or sector. The `baseline` block (nEvents, median3m, mean3m, hitRate3m, plus excessMedian3m, excessMean3m and beatMarket3m for buys and sells) is site-wide. All return fields are FRACTIONS, 0.05 means +5%. Requires Pro plan or higher (402 PLAN_REQUIRED on Free). Returns 404 NOT_FOUND if the ticker isn't tracked; when several companies hold the ticker, the one GET /v1/companies/{ticker} returns is used. Cached for 24 hours per ticker, and the baseline is cached for 24 hours, so `asOf` can lag the latest filings by up to a day or two."""
+        data = self._client._get(f"/v1/companies/{ticker}/returns-summary")
+        return CompanyReturnsSummaryResponse._from_dict(data)
+
     def list(self, *, sort: str | None = None, limit: int | None = None) -> list[CompanyResponse]:
         """List companies with a public ticker, sorted by name or total filings
 
@@ -1543,7 +2031,7 @@ class GeneratedCompaniesResource:
     def peers(self, ticker: str, *, limit: int | None = None) -> CompanyPeersResponse:
         """Peer companies in the same SIC industry, ranked by recent Form 4 activity
 
-        Returns other tracked companies in the same industry as the given ticker, for "similar companies" links. Candidates share the company's 4-digit SIC code (matchLevel "sic4"); when too few of those have Form 4 filings in the last 12 months to fill `limit`, companies sharing only the 2-digit SIC prefix (matchLevel "sic2") are added. Active peers (at least one Form 4 filing dated in the trailing 12 months, `filings12m`) come first, sic4 before sic2, each tier ordered by `filings12m` descending then ticker ascending; peers with no filings in the window are appended last only if there is still room. The company itself is excluded, as are companies without a ticker or without a usable SIC code. `basis` is "sic4", "sic2" or "mixed" according to the match levels present in `peers`, and "none" when `peers` is empty (including when the company has no SIC code, which is 200 with an empty list, not 404). `limit` defaults to 10 and is clamped to 1-25. Returns 404 NOT_FOUND if the ticker isn't tracked. Not plan-gated. Results are cached for a few hours."""
+        Returns other tracked companies in the same industry as the given ticker, for "similar companies" links. Candidates share the company's 4-digit SIC code (matchLevel "sic4"); when too few of those have Form 4 filings in the last 12 months to fill `limit`, companies sharing only the 2-digit SIC prefix (matchLevel "sic2") are added. Active peers (at least one Form 4 filing dated in the trailing 12 months, `filings12m`) come first, sic4 before sic2, each tier ordered by `filings12m` descending then ticker ascending; peers with no filings in the window are appended last only if there is still room. The company itself is excluded, as are companies without a ticker or without a usable SIC code, and any other company holding the same ticker. When several companies hold the ticker, the one GET /v1/companies/{ticker} returns is used. `basis` is "sic4", "sic2" or "mixed" according to the match levels present in `peers`, and "none" when `peers` is empty (including when the company has no SIC code, which is 200 with an empty list, not 404). `limit` defaults to 10 and is clamped to 1-25. Returns 404 NOT_FOUND if the ticker isn't tracked. Not plan-gated. Results are cached for a few hours."""
         params = {
             "limit": limit,
         }
@@ -1555,6 +2043,13 @@ class GeneratedCompaniesResource:
 class GeneratedAsyncCompaniesResource:
     def __init__(self, client) -> None:
         self._client = client
+
+    async def company_returns_summary(self, ticker: str) -> CompanyReturnsSummaryResponse:
+        """What happened after insiders traded at a company (Pro plan+)
+
+        Summarises price returns after insider open-market trades at one company, for buys and for discretionary sells, next to a site-wide baseline computed the same way. The unit is an event: one per company per filing date and side. An event's return at a horizon (1m, 3m, 6m = 21, 63, 126 trading days) is the average of that event's rows, measured from the filing-date close. Included: open-market purchases (P) and sales (S) that are not superseded, not derivative and carry no value-quality flag, filed since 2023-05-22; sells exclude 10b5-1 plan sales. An event counts toward a horizon only once that horizon has matured. `nEvents` is the number of events with a 3m return; `n1m` and `n6m` are the counts for the other horizons. Medians are null when that horizon has fewer than 10 events; `mean3m` and `hitRate3m` (share of events with a positive 3m return) are null when `nEvents` is below 10. `events` lists the individual events, newest first, only when `nEvents` is between 3 and 9, otherwise it is empty. `suppressed` is true when the median filing-date close across the company's buy and sell events is below $1, and `lowPrice` is true when that median is from $1 up to below $5; the price itself is not returned. Market comparison: each event's stock return is compared with the S&P 500 (SPY) return over the same window, from the stock's filing-date close bar to the stock's own bar at the horizon, matched by exact date; the event's excess return is the stock return minus the SPY return, computed only when both exist (events without an SPY return are left out, never filled in). `nExcess1m`, `nExcess3m` and `nExcess6m` count the events with an excess return per horizon; `excessMedian1m`, `excessMedian3m` and `excessMedian6m` are null when that count is below 10; `excessMean3m` and `beatMarket3m` (share of events whose 3m stock return exceeded SPY's) are null when `nExcess3m` is below 10. Each item in `events` carries `excess3m`. Not adjusted for company size or sector. The `baseline` block (nEvents, median3m, mean3m, hitRate3m, plus excessMedian3m, excessMean3m and beatMarket3m for buys and sells) is site-wide. All return fields are FRACTIONS, 0.05 means +5%. Requires Pro plan or higher (402 PLAN_REQUIRED on Free). Returns 404 NOT_FOUND if the ticker isn't tracked; when several companies hold the ticker, the one GET /v1/companies/{ticker} returns is used. Cached for 24 hours per ticker, and the baseline is cached for 24 hours, so `asOf` can lag the latest filings by up to a day or two."""
+        data = await self._client._get(f"/v1/companies/{ticker}/returns-summary")
+        return CompanyReturnsSummaryResponse._from_dict(data)
 
     async def list(self, *, sort: str | None = None, limit: int | None = None) -> list[CompanyResponse]:
         """List companies with a public ticker, sorted by name or total filings
@@ -1571,7 +2066,7 @@ class GeneratedAsyncCompaniesResource:
     async def peers(self, ticker: str, *, limit: int | None = None) -> CompanyPeersResponse:
         """Peer companies in the same SIC industry, ranked by recent Form 4 activity
 
-        Returns other tracked companies in the same industry as the given ticker, for "similar companies" links. Candidates share the company's 4-digit SIC code (matchLevel "sic4"); when too few of those have Form 4 filings in the last 12 months to fill `limit`, companies sharing only the 2-digit SIC prefix (matchLevel "sic2") are added. Active peers (at least one Form 4 filing dated in the trailing 12 months, `filings12m`) come first, sic4 before sic2, each tier ordered by `filings12m` descending then ticker ascending; peers with no filings in the window are appended last only if there is still room. The company itself is excluded, as are companies without a ticker or without a usable SIC code. `basis` is "sic4", "sic2" or "mixed" according to the match levels present in `peers`, and "none" when `peers` is empty (including when the company has no SIC code, which is 200 with an empty list, not 404). `limit` defaults to 10 and is clamped to 1-25. Returns 404 NOT_FOUND if the ticker isn't tracked. Not plan-gated. Results are cached for a few hours."""
+        Returns other tracked companies in the same industry as the given ticker, for "similar companies" links. Candidates share the company's 4-digit SIC code (matchLevel "sic4"); when too few of those have Form 4 filings in the last 12 months to fill `limit`, companies sharing only the 2-digit SIC prefix (matchLevel "sic2") are added. Active peers (at least one Form 4 filing dated in the trailing 12 months, `filings12m`) come first, sic4 before sic2, each tier ordered by `filings12m` descending then ticker ascending; peers with no filings in the window are appended last only if there is still room. The company itself is excluded, as are companies without a ticker or without a usable SIC code, and any other company holding the same ticker. When several companies hold the ticker, the one GET /v1/companies/{ticker} returns is used. `basis` is "sic4", "sic2" or "mixed" according to the match levels present in `peers`, and "none" when `peers` is empty (including when the company has no SIC code, which is 200 with an empty list, not 404). `limit` defaults to 10 and is clamped to 1-25. Returns 404 NOT_FOUND if the ticker isn't tracked. Not plan-gated. Results are cached for a few hours."""
         params = {
             "limit": limit,
         }
@@ -2033,8 +2528,12 @@ as FRACTIONS — 0.05 means +5%, -0.10 means -10%."""
 
         Aggregate career roll-up for a single insider: first/last transaction dates, total transactions,
 total bought/sold/net USD, transaction-code breakdown (P/S/F/M/A/G/other counts), the top 10
-companies traded (by activity), the 10b5-1 vs discretionary split, and average post-trade returns
-across discretionary open-market (non-10b5-1) buy/sell trades. Use this for a one-call career
+companies traded (by activity), the 10b5-1 vs discretionary split, and post-trade returns
+across discretionary open-market (non-10b5-1) buy/sell trades. The S count includes every
+sale; SWithValue counts only the sales that contribute to TotalSoldUsd (trusted value, price
+and shares above zero), so S minus SWithValue is the number of sales the dollar total omits.
+Despite their AvgReturn names, the return fields are the MEDIAN across those trades, and
+trades with an entry close below $0.01 carry no return, and a horizon is null when a one-day close change of 10x or more (typically a split) falls inside its window. Use this for a one-call career
 overview rather than paging through GET /v1/insiders/{cik}/transactions yourself; for a scored
 hit-rate track record on buys specifically, use GET /v1/insiders/{cik}/scorecard instead.
 Requires Pro plan or higher (402 PLAN_REQUIRED on Free/Starter). Returns 404 NOT_FOUND if the CIK
@@ -2139,8 +2638,12 @@ as FRACTIONS — 0.05 means +5%, -0.10 means -10%."""
 
         Aggregate career roll-up for a single insider: first/last transaction dates, total transactions,
 total bought/sold/net USD, transaction-code breakdown (P/S/F/M/A/G/other counts), the top 10
-companies traded (by activity), the 10b5-1 vs discretionary split, and average post-trade returns
-across discretionary open-market (non-10b5-1) buy/sell trades. Use this for a one-call career
+companies traded (by activity), the 10b5-1 vs discretionary split, and post-trade returns
+across discretionary open-market (non-10b5-1) buy/sell trades. The S count includes every
+sale; SWithValue counts only the sales that contribute to TotalSoldUsd (trusted value, price
+and shares above zero), so S minus SWithValue is the number of sales the dollar total omits.
+Despite their AvgReturn names, the return fields are the MEDIAN across those trades, and
+trades with an entry close below $0.01 carry no return, and a horizon is null when a one-day close change of 10x or more (typically a split) falls inside its window. Use this for a one-call career
 overview rather than paging through GET /v1/insiders/{cik}/transactions yourself; for a scored
 hit-rate track record on buys specifically, use GET /v1/insiders/{cik}/scorecard instead.
 Requires Pro plan or higher (402 PLAN_REQUIRED on Free/Starter). Returns 404 NOT_FOUND if the CIK
